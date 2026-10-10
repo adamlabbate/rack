@@ -77,8 +77,19 @@ CURRENT STAGE: 2 (AI styling v1). Stage 1 is done; its loose ends are in TODO.md
 - Stage 1 is finished. Known issues and loose ends live in TODO.md: add new ones
   there; tick one off only after the user asked for it and it's fixed. The README is the public overview; keep its
   "What works today" and Roadmap in sync when a stage lands.
+- Stage 2 backend is done and tested on jake's real closet; the stage 2 frontend
+  (stylist screen, flat-lay collages, swap/lock) is next.
 - api/.env holds GEMINI_API_KEY. GEMINI_MOCK=1 (env or api/.env) makes
-  analyze_photo return a fixed 2-garment result with no API calls.
+  analyze_photo return a fixed 2-garment result and style_outfits return 2 outfits
+  from the user's real items, with no API calls.
+- Stylist: POST /stylist {user_id, request, locked_item_ids} -> gemini.style_outfits:
+  agent chat with tools from api/tools.py (search_closet, get_weather (hardcoded),
+  get_preferences (empty)); bind_owner() hides owner_id from Gemini. A second
+  structured call parses the answer into Outfits; outfit_problems() validates in
+  code, one retry in the same chat with the errors, invalid ones dropped. Returns
+  [{outfit, items}] (items expanded, with cutout_path) and saves outfits rows.
+  422 = impossible request (closet lacks top/bottom/shoes, bad locks), 502 = Gemini
+  down. Takes ~15-40s. Rain rule applies to shoes and outerwear only.
 - Upload pipeline: POST /uploads -> gemini.analyze_photo (one call: photo_type +
   garments with box_2d/visibility/overlapping/tags) -> 1 clean garment is added
   directly, otherwise pending in the uploads table until POST /uploads/{id}/confirm
@@ -89,7 +100,7 @@ CURRENT STAGE: 2 (AI styling v1). Stage 1 is done; its loose ends are in TODO.md
 - edited_fields protects user edits from POST /items/{id}/retag.
 - Image files are deleted with what owns them via remove_unused_files(), which keeps
   any file still referenced (several items can share one onbody_path).
-- Gemini 503s ("high demand") happen; analyze_photo retries 429 and 503.
+- Gemini 503s ("high demand") happen; all Gemini calls go through _with_retry (429/503).
 - db.add_missing_columns() adds new columns to existing tables, but can't
   change a column's type: delete api/rack.db if a type changes.
 - web/ is Next.js 16: read web/AGENTS.md and node_modules/next/dist/docs/

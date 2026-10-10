@@ -50,6 +50,7 @@ class Item(SQLModel, table=True):
     edited_fields: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
     needs_retake: bool = False  # added from a photo where it overlapped another garment
+    visibility: str | None = None  # full / partial: how much of it the photo showed
 
     shared: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -65,6 +66,21 @@ class Upload(SQLModel, table=True):
     image_path: str
     photo_type: str
     detections: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Outfit(SQLModel, table=True):
+    """One outfit the stylist suggested. A single request saves 2-3 of these."""
+
+    __tablename__ = "outfits"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    request: str
+    name: str
+    reason: str
+    item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
+    locked_item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

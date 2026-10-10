@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, or_, select
 
 import gemini
-from db import Item, Upload, User, get_session, init_db
+from db import Item, Outfit, Upload, User, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
 register_heif_opener()  # lets Pillow read iPhone HEIC photos picked from the library
@@ -199,6 +199,7 @@ def create_items(session: Session, upload: Upload, detections: list[Detection]) 
             onbody_path=upload.image_path if upload.photo_type == "on_body" else None,
             # TODO (stage 3): clean up overlapped garments with AI image editing instead of a retake.
             needs_retake=det.overlapping,
+            visibility=det.visibility,
         )
         cutout = make_cutout(photo, det.box, upload.photo_type, det.tags, masks)
         if cutout:
@@ -408,3 +409,48 @@ def retag_item(item_id: int, session: Session = Depends(get_session)) -> Item:
     session.commit()
     session.refresh(item)
     return item
+
+
+class StylistRequest(BaseModel):
+    user_id: int
+    request: str = Field(min_length=1)
+    locked_item_ids: list[int] = []
+
+
+class OutfitOut(BaseModel):
+    """A saved outfit with its items expanded, so the app can draw the flat-lay right away."""
+
+    outfit: Outfit
+    items: list[Item]
+
+
+@app.post("/stylist")
+def stylist(body: StylistRequest, session: Session = Depends(get_session)) -> list[OutfitOut]:
+    """Ask the Gemini stylist for 2-3 outfits from the user's closet; valid ones are saved."""
+    if not session.get(User, body.user_id):
+        raise HTTPException(404, "Unknown user")
+    locked = list(dict.fromkeys(body.locked_item_ids))
+    try:
+        picks = gemini.style_outfits(body.user_id, body.request.strip(), locked)
+    except ValueError as e:  # closet or locked items make a valid outfit impossible
+        raise HTTPException(422, str(e))
+    if picks is None:
+        raise HTTPException(502, "The stylist is unavailable, try again in a moment")
+    if not picks:
+        raise HTTPException(422, "Couldn't put together a complete outfit, try rephrasing")
+
+    outfits = [
+        Outfit(
+            user_id=body.user_id, request=body.request.strip(), name=p.name, reason=p.reason,
+            item_ids=p.item_ids, locked_item_ids=locked,
+        )
+        for p in picks
+    ]
+    session.add_all(outfits)
+    session.commit()
+    result = []
+    for outfit in outfits:
+        session.refresh(outfit)
+        items = [session.get(Item, i) for i in outfit.item_ids]  # validated: all exist
+        result.append(OutfitOut(outfit=outfit, items=items))
+    return result

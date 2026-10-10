@@ -4,6 +4,13 @@ Backlog for the user to prioritize. Don't start these without being asked.
 
 Known issues and loose ends, to fix when there's time. Newest at the top of each section.
 
+## Stage 2 (AI styling) follow-ups
+
+- [ ] **Stylist is slow (~40s).** One real `POST /stylist` took 40s (agent call with tools + a
+      structuring call). Needs a good loading state in the UI; could also try lower thinking
+      budget or skipping the second call.
+- [ ] **`get_weather` is hardcoded** (58°F, light rain) in `api/tools.py`.
+
 ## Stage 1 (Wardrobe) follow-ups
 
 - [ ] **Shoe pairs may show up as two items.** On a full-body photo Gemini listed the left and
