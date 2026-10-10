@@ -218,3 +218,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Next.js
+node_modules/
+.next/
+out/
+.vercel
+
+# App data
+api/static/
+*.db
+.DS_Store
+
+# Secrets: any .env variant (e.g. .env.local), but allow a committed example
+.env.*
+!.env.example
+
+# The Python template's lib/ rule above would otherwise hide web/src/lib (api.ts, utils.ts)
+!web/src/lib/
