@@ -66,3 +66,13 @@ CURRENT STAGE: 1 (Wardrobe)
 ## Commands
 - api: cd api && source .venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0
 - web: cd web && npm run dev -- -H 0.0.0.0
+
+## Status / notes
+- Stage 1 progress: upload + persistence + layout + user switcher done.
+  Next: rembg cutouts -> Gemini tagging (gemini.py) -> tag edit UI.
+- api/.env must contain GEMINI_API_KEY (not created yet).
+- web/ is Next.js 16: read web/AGENTS.md and node_modules/next/dist/docs/
+  before writing Next code.
+- Node/Python come from Homebrew (/opt/homebrew/bin); venv is Python 3.12.
+- Phone testing: http://<laptop LAN IP>:3000 (ipconfig getifaddr en0);
+  use a phone hotspot if venue Wi-Fi isolates clients.
