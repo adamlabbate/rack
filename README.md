@@ -115,9 +115,9 @@ without using quota.
 
 1. ~~Wardrobe~~: upload, cutouts, Gemini tags and fit, editing (done)
 2. ~~AI stylist~~: outfits from your closet, flat-lay cards, swap, lock, regenerate (done)
-3. On-body renders: see an outfit on your own photo (Nano Banana)
-4. Friends: shared closets and borrow requests
-5. Profiles: pinned pieces, fit pics, fit history
+3. Friends: shared closets and borrow requests (next)
+4. Profiles: pinned pieces, fit pics, fit history
+5. Later: on-body renders, see an outfit on your own photo (Nano Banana)
 
 Known issues are tracked in [TODO.md](TODO.md).
 

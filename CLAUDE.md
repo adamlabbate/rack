@@ -25,7 +25,8 @@ from each other. Fit matters: every item stores how it fits
    picks items from the wardrobe and returns 2-3 outfits shown as
    flat-lay collages of the stored cutouts. Users can swap/lock items.
 3. AI styling v2: render the outfit on the user's own full-body photo
-   (Nano Banana), respecting each item's fit tags.
+   (Nano Banana), respecting each item's fit tags. POSTPONED: skipped for now;
+   come back only if stage 4 is done with time left, as one "See it on me" button.
 4. Social: friends, shared closets, the stylist can use friends' shared
    items, borrow requests (request / accept / decline).
 5. Profiles: pin favorite pieces to your profile, post fit pics,
@@ -33,7 +34,7 @@ from each other. Fit matters: every item stores how it fits
 6. Later ideas (do NOT build unless asked): fit check mirror (phone
    camera logs what you're wearing), voice stylist (ElevenLabs).
 
-CURRENT STAGE: 3 (AI styling v2). Stages 1 and 2 are done; their loose ends are in TODO.md.
+CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stage 3 is postponed.
 
 ## Stack
 - api/: Python FastAPI, SQLModel + SQLite, rembg (u2net, u2net_cloth_seg), google-genai
