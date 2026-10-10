@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pull",
+  title: "Rack",
   description: "Your closet, styled by Gemini, shared with friends.",
 };
 

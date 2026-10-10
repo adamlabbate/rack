@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { getUsers, type User } from "@/lib/api";
 
-const STORAGE_KEY = "pull.userId";
+const STORAGE_KEY = "rack.userId";
 
 type UserContextValue = {
   users: User[];

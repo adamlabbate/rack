@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Project
-A shared-closet app (working name: Pull), built solo at HackRU (Gemini track).
+A shared-closet app (working name: Rack), built solo at HackRU (Gemini track).
 People upload their clothes into a persistent digital wardrobe, a Gemini
 stylist builds outfits from it, and later friends share closets and borrow
 from each other. Fit matters: every item stores how it fits

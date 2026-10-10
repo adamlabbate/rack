@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Pull API", lifespan=lifespan)
+app = FastAPI(title="Rack API", lifespan=lifespan)
 
 # The web app runs on :3000, opened either on this machine or from a phone on the LAN.
 app.add_middleware(

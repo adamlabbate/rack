@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
-DB_PATH = Path(__file__).parent / "pull.db"
+DB_PATH = Path(__file__).parent / "rack.db"
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
 SEED_USERS = ["adam", "jake", "maya"]
