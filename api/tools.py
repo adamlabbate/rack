@@ -9,7 +9,7 @@ import inspect
 
 from sqlmodel import Session, select
 
-from db import Item, engine
+from db import Item, User, engine
 
 
 def search_closet(
@@ -82,9 +82,27 @@ def get_weather(city: str) -> dict:
 
 
 def get_preferences(owner_id: int) -> dict:
-    """What the user tends to like or reject, learned from their swaps. May be empty."""
-    # Filled in later from swaps; empty until then.
-    return {}
+    """What the user tends to like or avoid, learned from items they swapped in and out of
+    past outfits. May be empty.
+
+    Returns:
+        swaps: how many swaps this is based on.
+        prefers / avoids: tag -> values, strongest first. Tags are "<category> silhouette",
+        "<category> length", "style" and "colors".
+    """
+    with Session(engine) as session:
+        user = session.get(User, owner_id)
+        prefs = (user.preferences if user else None) or {}
+    prefers, avoids = {}, {}
+    for tag, values in prefs.get("scores", {}).items():
+        ranked = sorted(values.items(), key=lambda kv: -abs(kv[1]))
+        if liked := [v for v, s in ranked if s > 0]:
+            prefers[tag] = liked
+        if disliked := [v for v, s in ranked if s < 0]:
+            avoids[tag] = disliked
+    if not prefers and not avoids:
+        return {}
+    return {"swaps": prefs.get("swaps", 0), "prefers": prefers, "avoids": avoids}
 
 
 def bind_owner(fn, owner_id: int):

@@ -209,10 +209,15 @@ def outfit_problems(item_ids: list[int], closet: dict[int, Item], locked_item_id
 
 
 def mock_outfits(closet: dict[int, Item], locked_item_ids: list[int]) -> list[OutfitPick]:
-    """GEMINI_MOCK=1: two outfits from the user's real items, rotating through each category."""
-    by_category = {c: sorted(i.id for i in closet.values() if i.category == c) for c in REQUIRED_CATEGORIES}
+    """GEMINI_MOCK=1: two outfits from the user's real items, rotating through each category.
+
+    Adds an outerwear piece when the closet has one, so locking a jacket can be tried in mock mode.
+    """
+    categories = REQUIRED_CATEGORIES + ("outerwear",)
+    by_category = {c: sorted(i.id for i in closet.values() if i.category == c) for c in categories}
+    by_category = {c: ids for c, ids in by_category.items() if ids}
     locked = {closet[i].category: i for i in locked_item_ids}
-    extras = [i for i in locked_item_ids if closet[i].category not in REQUIRED_CATEGORIES]
+    extras = [i for i in locked_item_ids if closet[i].category not in categories]
     return [
         OutfitPick(
             name=f"Mock fit {n + 1}",

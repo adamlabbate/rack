@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, or_, select
 
 import gemini
+import styling
 from db import Item, Outfit, Upload, User, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
@@ -454,3 +455,59 @@ def stylist(body: StylistRequest, session: Session = Depends(get_session)) -> li
         items = [session.get(Item, i) for i in outfit.item_ids]  # validated: all exist
         result.append(OutfitOut(outfit=outfit, items=items))
     return result
+
+
+class Alternative(BaseModel):
+    item: Item
+    score: float  # 0-1: formality match 40%, color compatibility 35%, weather fit 25%
+    notes: list[str]  # short reasons for the UI, e.g. "right formality", "rain-ok"
+
+
+@app.get("/items/{item_id}/alternatives")
+def item_alternatives(
+    item_id: int, outfit_id: int | None = None, session: Session = Depends(get_session)
+) -> list[Alternative]:
+    """Same-category items from the owner's closet that could replace this one, best first.
+
+    With outfit_id they're judged against the rest of that outfit, otherwise against the item.
+    """
+    item = get_item_or_404(session, item_id)
+    outfit_items = [item]
+    if outfit_id is not None:
+        outfit = session.get(Outfit, outfit_id)
+        if not outfit or item_id not in outfit.item_ids:
+            raise HTTPException(404, "Item isn't in that outfit")
+        outfit_items = [i for i in (session.get(Item, i) for i in outfit.item_ids) if i]
+    closet = session.exec(select(Item).where(Item.owner_id == item.owner_id)).all()
+    return styling.rank_alternatives(item, closet, outfit_items)
+
+
+class Swap(BaseModel):
+    old_item_id: int
+    new_item_id: int
+
+
+@app.post("/outfits/{outfit_id}/swap")
+def swap_item(outfit_id: int, body: Swap, session: Session = Depends(get_session)) -> OutfitOut:
+    """Replace one piece of a saved outfit and remember what the swap says about the user's taste."""
+    outfit = session.get(Outfit, outfit_id)
+    if not outfit:
+        raise HTTPException(404, "Outfit not found")
+    if body.old_item_id not in outfit.item_ids:
+        raise HTTPException(400, "That item isn't in this outfit")
+    if body.new_item_id in outfit.item_ids:
+        raise HTTPException(400, "That item is already in this outfit")
+    old = get_item_or_404(session, body.old_item_id)
+    new = get_item_or_404(session, body.new_item_id)
+    if new.owner_id != outfit.user_id or new.category != old.category:
+        raise HTTPException(400, f"Pick another {old.category} from your closet")
+
+    # New lists so SQLAlchemy sees the JSON changes.
+    outfit.item_ids = [new.id if i == old.id else i for i in outfit.item_ids]
+    outfit.locked_item_ids = [i for i in outfit.locked_item_ids if i != old.id]
+    user = session.get(User, outfit.user_id)
+    styling.record_swap(user, old, new)
+    session.add_all([outfit, user])
+    session.commit()
+    session.refresh(outfit)
+    return OutfitOut(outfit=outfit, items=[session.get(Item, i) for i in outfit.item_ids])

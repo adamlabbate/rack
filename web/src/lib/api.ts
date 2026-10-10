@@ -149,3 +149,42 @@ export function deleteItem(id: number) {
 export function discardUpload(uploadId: string) {
   return request<{ deleted: string }>(`/uploads/${uploadId}`, { method: "DELETE" });
 }
+
+// ---------- Stylist (stage 2) ----------
+
+export type Outfit = {
+  id: number;
+  user_id: number;
+  request: string;
+  name: string;
+  reason: string;
+  item_ids: number[];
+  locked_item_ids: number[];
+  created_at: string;
+};
+
+// An outfit with its items expanded, in the same order as item_ids.
+export type StyledOutfit = { outfit: Outfit; items: Item[] };
+
+export type Alternative = { item: Item; score: number; notes: string[] };
+
+// Takes ~15-40s with the real stylist.
+export function styleOutfits(userId: number, text: string, lockedItemIds: number[]) {
+  return request<StyledOutfit[]>("/stylist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, request: text, locked_item_ids: lockedItemIds }),
+  });
+}
+
+export function getAlternatives(itemId: number, outfitId: number) {
+  return request<Alternative[]>(`/items/${itemId}/alternatives?outfit_id=${outfitId}`);
+}
+
+export function swapItem(outfitId: number, oldItemId: number, newItemId: number) {
+  return request<StyledOutfit>(`/outfits/${outfitId}/swap`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ old_item_id: oldItemId, new_item_id: newItemId }),
+  });
+}

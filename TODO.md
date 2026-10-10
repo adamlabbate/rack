@@ -6,6 +6,14 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 
 ## Stage 2 (AI styling) follow-ups
 
+- [ ] **Style results can go stale.** The Style tab keeps the last outfits in memory across tab
+      switches; editing or deleting one of those items in the Closet doesn't update the cards.
+- [ ] **Alternatives use the hardcoded weather** (`styling.CITY` -> `get_weather`), not the
+      weather the user typed in their request.
+- [ ] **Preferences never fade.** Swap scores only add up; an old swap counts as much as today's.
+- [ ] **`users.preferences` starts as `[]` on migrated rows** (`add_missing_columns` gives every
+      JSON column `DEFAULT '[]'`). Code reads it with `or {}`, so it's harmless.
+
 - [ ] **Stylist is slow (~40s).** One real `POST /stylist` took 40s (agent call with tools + a
       structuring call). Needs a good loading state in the UI; could also try lower thinking
       budget or skipping the second call.

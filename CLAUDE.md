@@ -33,7 +33,7 @@ from each other. Fit matters: every item stores how it fits
 6. Later ideas (do NOT build unless asked): fit check mirror (phone
    camera logs what you're wearing), voice stylist (ElevenLabs).
 
-CURRENT STAGE: 2 (AI styling v1). Stage 1 is done; its loose ends are in TODO.md.
+CURRENT STAGE: 3 (AI styling v2). Stages 1 and 2 are done; their loose ends are in TODO.md.
 
 ## Stack
 - api/: Python FastAPI, SQLModel + SQLite, rembg (u2net, u2net_cloth_seg), google-genai
@@ -77,14 +77,22 @@ CURRENT STAGE: 2 (AI styling v1). Stage 1 is done; its loose ends are in TODO.md
 - Stage 1 is finished. Known issues and loose ends live in TODO.md: add new ones
   there; tick one off only after the user asked for it and it's fixed. The README is the public overview; keep its
   "What works today" and Roadmap in sync when a stage lands.
-- Stage 2 backend is done and tested on jake's real closet; the stage 2 frontend
-  (stylist screen, flat-lay collages, swap/lock) is next.
+- Stage 2 backend and frontend are built (Style tab: web/src/app/style/page.tsx,
+  components/outfit-card.tsx, components/alternatives-sheet.tsx). Stage 2 is done: tested end
+  to end in mock mode and with the real stylist on a phone. Closets are still small; more photos
+  are needed for richer outfits.
+- Swaps: GET /items/{id}/alternatives?outfit_id= ranks same-category items in api/styling.py
+  (no Gemini: formality 40%, color 35%, weather 25%). POST /outfits/{id}/swap updates the outfit
+  and styling.record_swap() scores tags (+1 picked, -1 dropped) in users.preferences;
+  tools.get_preferences() turns that into prefers/avoids for the agent.
+- Locks live in the Style page state (one per top/bottom/shoes/outerwear); Regenerate sends
+  only locked IDs still on screen.
 - api/.env holds GEMINI_API_KEY. GEMINI_MOCK=1 (env or api/.env) makes
   analyze_photo return a fixed 2-garment result and style_outfits return 2 outfits
-  from the user's real items, with no API calls.
+  from the user's real items (incl. an outerwear piece if they own one), with no API calls.
 - Stylist: POST /stylist {user_id, request, locked_item_ids} -> gemini.style_outfits:
   agent chat with tools from api/tools.py (search_closet, get_weather (hardcoded),
-  get_preferences (empty)); bind_owner() hides owner_id from Gemini. A second
+  get_preferences (learned from swaps)); bind_owner() hides owner_id from Gemini. A second
   structured call parses the answer into Outfits; outfit_problems() validates in
   code, one retry in the same chat with the errors, invalid ones dropped. Returns
   [{outfit, items}] (items expanded, with cutout_path) and saves outfits rows.

@@ -30,6 +30,17 @@ Built solo at HackRU for the Gemini track.
   edits are never overwritten by re-tagging.
 - **Closet grid** with category filters, an amber dot on items whose fit isn't confirmed, and
   item deletion (image files are removed too).
+- **AI stylist** (Style tab): ask for an outfit in plain words, or tap "Class tomorrow",
+  "Date night" or "Career fair". A Gemini agent searches your closet with tools (closet search,
+  weather, your learned preferences) and returns 2–3 outfits. Every outfit is checked in code
+  (exactly one top, bottom and shoes, all from your closet) and retried once if it breaks a rule.
+- **Flat-lay outfit cards**: swipe between outfits drawn from your cutouts, with each piece's fit
+  under it and one line on why the outfit works.
+- **Swap and lock**: tap a piece to see alternatives from your closet, ranked instantly by
+  formality match, color compatibility and weather. Lock pieces you love and hit Regenerate to
+  get new outfits built around them.
+- **It learns from swaps**: every swap records what you picked over what you dropped
+  (silhouette, length, style, colors), and the stylist reads those preferences next time.
 - Everything persists in SQLite plus images on disk.
 
 ## Stack
@@ -38,7 +49,7 @@ Built solo at HackRU for the Gemini track.
 | --- | --- |
 | API (`api/`) | Python 3.12, FastAPI, SQLModel + SQLite, rembg, google-genai |
 | Web (`web/`) | Next.js 16 (App Router, TypeScript), Tailwind, shadcn/ui, Base UI |
-| AI | Gemini `gemini-3.8-flash` (photo analysis and tagging) |
+| AI | Gemini `gemini-3.8-flash` (photo analysis and tagging, stylist agent) |
 
 ## Running it locally
 
@@ -77,7 +88,9 @@ from talking to each other (common at venues), connect the laptop to your phone'
 ### Mock mode
 
 Set `GEMINI_MOCK=1` (in your shell or in `api/.env`) to skip the Gemini API. Every photo then
-returns the same two fake garments, which is handy for working on the UI without using quota.
+returns the same two fake garments, and the stylist returns two outfits built from your real
+closet (top, bottom, shoes, plus a jacket if you have one), which is handy for working on the UI
+without using quota.
 
 ## How an upload works
 
@@ -88,10 +101,20 @@ returns the same two fake garments, which is handy for working on the UI without
 3. `POST /uploads/{id}/confirm` creates the items you kept and cuts each one out.
 4. `PATCH /items/{id}` saves your edits. Changing a fit field marks the fit as confirmed.
 
+## How the stylist works
+
+1. `POST /stylist {user_id, request, locked_item_ids}` runs a Gemini agent with three tools:
+   `search_closet`, `get_weather` and `get_preferences`.
+2. A second structured-output call turns its answer into outfits. Code checks every outfit, sends
+   the problems back to the agent once, and drops anything still invalid.
+3. `GET /items/{id}/alternatives?outfit_id=` ranks same-category items without calling Gemini:
+   40% formality match with the rest of the outfit, 35% color compatibility, 25% weather fit.
+4. `POST /outfits/{id}/swap` saves the swap and updates your preferences.
+
 ## Roadmap
 
 1. ~~Wardrobe~~: upload, cutouts, Gemini tags and fit, editing (done)
-2. AI stylist: ask for an outfit in plain words, get 2–3 outfits from your closet
+2. ~~AI stylist~~: outfits from your closet, flat-lay cards, swap, lock, regenerate (done)
 3. On-body renders: see an outfit on your own photo (Nano Banana)
 4. Friends: shared closets and borrow requests
 5. Profiles: pinned pieces, fit pics, fit history

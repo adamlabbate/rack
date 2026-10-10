@@ -17,6 +17,9 @@ class User(SQLModel, table=True):
     name: str = Field(unique=True)
     avatar: str | None = None
     full_body_photo: str | None = None
+    # Learned from outfit swaps (styling.record_swap). Rows migrated by add_missing_columns
+    # start as [], so read it with `or {}`.
+    preferences: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
 
 class Item(SQLModel, table=True):
