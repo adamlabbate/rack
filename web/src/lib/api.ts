@@ -14,24 +14,72 @@ export type User = {
   avatar: string | null;
 };
 
+// Same vocabularies as api/gemini.py; the API rejects anything else.
+export const CATEGORIES = ["top", "bottom", "shoes", "outerwear", "accessory"] as const;
+export const STYLES = ["streetwear", "casual", "smart_casual", "formal", "athletic"] as const;
+export const SEASONS = ["warm", "cold", "all"] as const;
+export const WEATHER = ["rain", "snow"] as const;
+export const SILHOUETTES = [
+  "slim",
+  "straight",
+  "relaxed",
+  "baggy",
+  "wide_leg",
+  "boxy",
+  "oversized",
+  "regular",
+  "unknown",
+] as const;
+export const LENGTHS = ["cropped", "regular", "full", "stacked", "unknown"] as const;
+export const RISES = ["low", "mid", "high", "n_a"] as const;
+export const FIT_FIELDS = ["silhouette", "length", "rise"] as const;
+
+export type Category = (typeof CATEGORIES)[number];
+
 export type Item = {
   id: number;
   owner_id: number;
   image_path: string;
   cutout_path: string | null;
-  category: string | null;
+  onbody_path: string | null;
+  category: Category | null;
   subtype: string | null;
   colors: string[];
-  style: string | null;
-  formality: string | null;
-  season: string | null;
-  silhouette: string | null;
-  length: string | null;
-  rise: string | null;
+  style: (typeof STYLES)[number] | null;
+  formality: number | null;
+  season: (typeof SEASONS)[number] | null;
+  warmth: number | null;
+  weather_ok: (typeof WEATHER)[number][];
+  silhouette: (typeof SILHOUETTES)[number] | null;
+  length: (typeof LENGTHS)[number] | null;
+  rise: (typeof RISES)[number] | null;
+  custom_tags: string[];
   fit_confirmed: boolean;
+  user_edited: boolean;
+  edited_fields: string[];
+  needs_retake: boolean;
   shared: boolean;
   created_at: string;
 };
+
+export type ItemUpdate = Partial<
+  Pick<
+    Item,
+    | "category"
+    | "subtype"
+    | "colors"
+    | "style"
+    | "formality"
+    | "season"
+    | "warmth"
+    | "weather_ok"
+    | "silhouette"
+    | "length"
+    | "rise"
+    | "custom_tags"
+    | "fit_confirmed"
+  >
+>;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBase()}${path}`, init);
@@ -50,9 +98,54 @@ export function getItems(ownerId: number) {
   return request<Item[]>(`/items?owner_id=${ownerId}`);
 }
 
-export function uploadItem(ownerId: number, file: File) {
+// A garment Gemini found in a photo, waiting for the user to keep or skip it.
+export type Detection = {
+  index: number;
+  preview_path: string;
+  visibility: "full" | "partial";
+  overlapping: boolean;
+  tags: { category: Category; subtype: string } | null;
+};
+
+export type UploadResult = {
+  upload_id: string;
+  photo_type: "flat_lay" | "on_body" | "hanger" | "product";
+  items: Item[]; // added right away (one clean garment)
+  detections: Detection[]; // several garments or overlap: user picks which to add
+};
+
+export function uploadPhoto(ownerId: number, file: File) {
   const form = new FormData();
   form.append("file", file);
   form.append("owner_id", String(ownerId));
-  return request<Item>("/items", { method: "POST", body: form });
+  return request<UploadResult>("/uploads", { method: "POST", body: form });
+}
+
+export function confirmUpload(uploadId: string, indexes: number[]) {
+  return request<Item[]>(`/uploads/${uploadId}/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ indexes }),
+  });
+}
+
+export function updateItem(id: number, changes: ItemUpdate) {
+  return request<Item>(`/items/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(changes),
+  });
+}
+
+export function retagItem(id: number) {
+  return request<Item>(`/items/${id}/retag`, { method: "POST" });
+}
+
+export function deleteItem(id: number) {
+  return request<{ deleted: number }>(`/items/${id}`, { method: "DELETE" });
+}
+
+// Throw away a photo whose "Found N items" sheet was cancelled.
+export function discardUpload(uploadId: string) {
+  return request<{ deleted: string }>(`/uploads/${uploadId}`, { method: "DELETE" });
 }
