@@ -94,6 +94,13 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   GET /outfits?ids= on mount. POST /outfits/{id}/render refuses a new render (409) while a piece is unavailable.
 - Locks live in the Style page state (one per top/bottom/shoes/outerwear); Regenerate sends
   only locked IDs still on screen.
+- "Style this piece" (item sheet button, tagged items only): lib/style-anchor.ts hands the Item to the Style
+  page (module variable, no URL param); the page picks it up in an effect, sets anchor + lockedIds and runs
+  "Outfits built around my <color> <subtype>". The anchor chip keeps it locked for every new prompt until
+  cleared (X, unlocking it on a card, or swapping it out). Pure frontend: it's just a lock.
+- With cacheComponents, Next keeps visited pages alive (hidden in <Activity>) instead of unmounting them: state
+  and useState initializers are NOT re-run when you come back, effects are. Handle arrivals in effects, and
+  close sheets before navigating away (or they're still open on return).
 - Stage 4 backend and frontend are built (Friends tab: app/friends/page.tsx and
   app/friends/[kind]/[id] -> components/shared-closet.tsx; borrow-context.tsx holds the current
   user's requests, polls every 10s and owns the request sheet; requests-sheet.tsx is the header

@@ -224,7 +224,8 @@ def check_request(closet: dict[int, Item], locked_item_ids: list[int]):
         raise ValueError(f"Add at least one {', '.join(missing)} to your Rack first")
     unavailable = [i for i in locked_item_ids if i not in closet]
     if unavailable:
-        raise ValueError(f"Locked items {unavailable} aren't on your Rack or shared with you")
+        # e.g. the piece is lent out, or a friend stopped sharing it
+        raise ValueError("A locked piece isn't available right now (it may be lent out or no longer shared)")
     locked_categories = [closet[i].category for i in locked_item_ids]
     for category in REQUIRED_CATEGORIES:
         if locked_categories.count(category) > 1:

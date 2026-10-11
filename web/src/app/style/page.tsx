@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowUp, RefreshCw, Sparkles, X } from "lucide-react";
 import { getOutfits, styleOutfits, swapItem, type Item, type StyledOutfit } from "@/lib/api";
 import { AlternativesSheet } from "@/components/alternatives-sheet";
 import { OutfitCard } from "@/components/outfit-card";
 import { RenderSheet } from "@/components/render-sheet";
 import { WeatherWidget } from "@/components/weather-widget";
 import { useUser } from "@/components/user-context";
+import { takeAnchor } from "@/lib/style-anchor";
 import { cn } from "@/lib/utils";
 
 const QUICK_PROMPTS = ["Class tomorrow", "Date night", "Career fair"];
@@ -29,12 +30,21 @@ type Results = { userId: number; request: string; outfits: StyledOutfit[] };
 // Survives switching tabs (the page unmounts), so the last outfits are still here on return.
 let lastResults: Results | null = null;
 let lastLocked: number[] = [];
+let lastAnchor: Item | null = null;
+
+// The request sent when "Style this piece" opens the tab: "Outfits built around my black hoodie".
+function anchorRequest(item: Item) {
+  const name = [item.colors[0], item.subtype ?? item.category].filter(Boolean).join(" ");
+  return `Outfits built around my ${name}`;
+}
 
 export default function StylePage() {
   const { currentUser } = useUser();
   const [text, setText] = useState("");
   const [results, setResults] = useState<Results | null>(lastResults);
   const [lockedIds, setLockedIds] = useState<number[]>(lastLocked);
+  // "Style this piece": stays locked in every request until the chip is cleared.
+  const [anchor, setAnchor] = useState<Item | null>(lastAnchor);
   const [loading, setLoading] = useState(false);
   const [thinking, setThinking] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +56,13 @@ export default function StylePage() {
   const carousel = useRef<HTMLDivElement>(null);
 
   const mine = results && results.userId === currentUser?.id ? results : null;
+  const myAnchor = anchor && anchor.owner_id === currentUser?.id ? anchor : null;
 
   useEffect(() => {
     lastResults = results;
     lastLocked = lockedIds;
-  }, [results, lockedIds]);
+    lastAnchor = anchor;
+  }, [results, lockedIds, anchor]);
 
   // Coming back to this tab: pieces may have been edited, deleted or lent out in the meantime.
   useEffect(() => {
@@ -93,9 +105,33 @@ export default function StylePage() {
 
   function submit(request: string) {
     setText("");
-    setLockedIds([]); // a new request starts fresh; Regenerate keeps the locks
-    ask(request, []);
+    // A new request starts fresh (except the anchored piece); Regenerate keeps the locks.
+    const locked = myAnchor ? [myAnchor.id] : [];
+    setLockedIds(locked);
+    ask(request, locked);
   }
+
+  function styleAround(item: Item) {
+    setAnchor(item);
+    setLockedIds([item.id]);
+    ask(anchorRequest(item), [item.id]);
+  }
+
+  function clearAnchor() {
+    if (!anchor) return;
+    setLockedIds((prev) => prev.filter((id) => id !== anchor.id));
+    setAnchor(null);
+  }
+
+  // Arrived from an item's "Style this piece": build outfits around it right away. An effect, not useState
+  // initializers: with cacheComponents a visited page is kept alive (hidden) instead of unmounted, so state
+  // isn't re-created on return, but effects re-run each time the page is shown.
+  useEffect(() => {
+    const item = takeAnchor();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- picking up a hand-off from outside React
+    if (item) styleAround(item);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per arrival; takeAnchor() empties itself
+  }, []);
 
   function regenerate() {
     if (!mine) return;
@@ -106,10 +142,12 @@ export default function StylePage() {
   }
 
   function toggleLock(item: Item) {
+    if (item.id === anchor?.id) return clearAnchor(); // unlocking the anchor un-anchors it
     setLockedIds((prev) => {
       if (prev.includes(item.id)) return prev.filter((id) => id !== item.id);
       if (!SINGLE.includes(item.category ?? "")) return [...prev, item.id];
-      // Locking a second jacket replaces the first.
+      // Locking a second jacket replaces the first (and a second piece of the anchor's category drops it).
+      if (item.category === anchor?.category && SINGLE.includes(item.category ?? "")) setAnchor(null);
       const sameCategory = new Set(
         mine?.outfits.flatMap((o) => o.items).filter((i) => i.category === item.category).map((i) => i.id),
       );
@@ -130,6 +168,7 @@ export default function StylePage() {
   async function pickAlternative(outfitId: number, oldItem: Item, newItem: Item) {
     replaceOutfit(await swapItem(outfitId, oldItem.id, newItem.id));
     setLockedIds((prev) => prev.filter((id) => id !== oldItem.id));
+    if (oldItem.id === anchor?.id) setAnchor(null);
     setSheetOpen(false);
   }
 
@@ -152,6 +191,27 @@ export default function StylePage() {
       </p>
       <WeatherWidget />
 
+      {myAnchor && (
+        <div className="mb-2 flex items-center gap-3 rounded-2xl bg-surface p-2 pr-1">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl garment-surface p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
+            <img src={myAnchor.cutout_path ?? myAnchor.image_path} alt="" className="max-h-full max-w-full object-contain" />
+          </div>
+          <p className="min-w-0 flex-1 text-sm">
+            <span className="block text-muted-foreground">Styling around</span>
+            <span className="block truncate font-medium capitalize">{myAnchor.subtype ?? myAnchor.category}</span>
+          </p>
+          <button
+            onClick={clearAnchor}
+            disabled={loading}
+            aria-label="Stop styling around this piece"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -162,7 +222,7 @@ export default function StylePage() {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. Rainy day, lots of walking"
+          placeholder={myAnchor ? "Where are you wearing it?" : "e.g. Rainy day, lots of walking"}
           enterKeyHint="go"
           disabled={loading}
           className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"

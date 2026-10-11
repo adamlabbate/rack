@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Drawer } from "@base-ui/react/drawer";
-import { Camera, Check, CloudRain, Loader2, Plus, Snowflake, Sparkles, Trash2, Users, X } from "lucide-react";
+import { Camera, Check, CloudRain, Loader2, Plus, Snowflake, Sparkles, Trash2, Users, Wand2, X } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import {
   CATEGORIES,
@@ -20,6 +21,7 @@ import {
   type Item,
   type ItemUpdate,
 } from "@/lib/api";
+import { styleAround } from "@/lib/style-anchor";
 import { cn } from "@/lib/utils";
 
 // "smart_casual" -> "smart casual", "n_a" -> "n/a"
@@ -54,6 +56,7 @@ function SheetBody({
   onItemChange: (item: Item) => void;
   onItemDeleted: (item: Item) => void;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<"ask" | "busy" | null>(null);
   const [retagging, setRetagging] = useState(false);
@@ -137,6 +140,20 @@ function SheetBody({
 
         {error && (
           <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
+        )}
+
+        {/* The stylist needs a category to build around; untagged pieces get "Try again" below instead. */}
+        {item.category && (
+          // Drawer.Close: the Rack page is kept alive while you're on Style, so an open sheet would still be open on return.
+          <Drawer.Close
+            onClick={() => {
+              styleAround(item);
+              router.push("/style");
+            }}
+            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-base font-medium text-primary-foreground active:scale-[0.98]"
+          >
+            <Wand2 className="size-5" /> Style this piece
+          </Drawer.Close>
         )}
 
         <button

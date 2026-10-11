@@ -39,6 +39,9 @@ Built solo at HackRU for the Gemini track.
 - **Swap and lock**: tap a piece to see alternatives from your closet, ranked instantly by
   formality match, color compatibility and weather. Lock pieces you love and hit Regenerate to
   get new outfits built around them.
+- **Style this piece**: open any item on your Rack and tap "Style this piece". The Style tab
+  builds outfits around it right away, and it stays locked for every prompt you try next
+  ("Date night", "Career fair"...) until you clear it.
 - **It learns from swaps**: every swap records what you picked over what you dropped
   (silhouette, length, style, colors), and the stylist reads those preferences next time.
 - **Borrow from friends**: friends and groups (a dorm floor, a club, a friend group) share
