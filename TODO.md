@@ -77,9 +77,9 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
       amber dot disappears while length is still `unknown`.
 - [ ] **"Retake" is only a label.** Items flagged `needs_retake` show a badge, but there's no
       way to replace an item's photo; you have to delete the item and upload again.
-- [ ] **Abandoned uploads leak.** Closing the app while the "Found N items" sheet is open leaves
-      the photo, its crops and the pending `uploads` row behind. Cancel and Retake clean up
-      fine. Possible fix: delete pending uploads older than a day on startup.
+- [x] **Abandoned uploads leak.** Closing the app while the "Found N items" sheet is open leaves
+      the photo, its crops and the pending `uploads` row behind. Fixed: on startup,
+      `discard_stale_uploads()` drops pending uploads older than a day and their files.
 - [ ] **`unknown` is a selectable chip.** Users can pick "unknown" for silhouette and length
       themselves. Harmless, but slightly odd.
 

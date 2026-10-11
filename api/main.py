@@ -1,7 +1,7 @@
 import io
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -16,7 +16,7 @@ from sqlmodel import Session, or_, select
 import gemini
 import social
 import styling
-from db import STATIC_DIR, BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, get_session, init_db
+from db import STATIC_DIR, BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, engine, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
 register_heif_opener()  # lets Pillow read iPhone HEIC photos picked from the library
@@ -124,6 +124,7 @@ def apply_tags(item: Item, tags: gemini.Tags):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    discard_stale_uploads()
     load_rembg_sessions()
     yield
 
@@ -178,6 +179,23 @@ def remove_unused_files(session: Session, paths: list[str | None]):
         ).first() or session.exec(select(Upload.id).where(Upload.image_path == path)).first()
         if not in_use:
             (STATIC_DIR / path.removeprefix("/static/")).unlink(missing_ok=True)
+
+
+STALE_UPLOAD = timedelta(days=1)
+
+
+def discard_stale_uploads():
+    """Drop pending uploads whose "Found N items" sheet was abandoned (app closed mid-review)."""
+    cutoff = datetime.now(timezone.utc) - STALE_UPLOAD
+    with Session(engine) as session:
+        stale = session.exec(select(Upload).where(Upload.created_at < cutoff)).all()
+        for upload in stale:
+            session.delete(upload)
+        session.commit()
+        for upload in stale:
+            remove_unused_files(session, upload_files(upload))
+    if stale:
+        print(f"Discarded {len(stale)} abandoned uploads")
 
 
 def upload_files(upload: Upload) -> list[str]:
