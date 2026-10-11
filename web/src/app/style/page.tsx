@@ -5,6 +5,7 @@ import { ArrowUp, RefreshCw, Sparkles } from "lucide-react";
 import { styleOutfits, swapItem, type Item, type StyledOutfit } from "@/lib/api";
 import { AlternativesSheet } from "@/components/alternatives-sheet";
 import { OutfitCard } from "@/components/outfit-card";
+import { RenderSheet } from "@/components/render-sheet";
 import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,8 @@ export default function StylePage() {
   const [active, setActive] = useState(0); // which card is in view
   const [target, setTarget] = useState<{ outfitId: number; item: Item } | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [renderTarget, setRenderTarget] = useState<StyledOutfit | null>(null);
+  const [renderOpen, setRenderOpen] = useState(false);
   const carousel = useRef<HTMLDivElement>(null);
 
   const mine = results && results.userId === currentUser?.id ? results : null;
@@ -96,14 +99,18 @@ export default function StylePage() {
     });
   }
 
-  async function pickAlternative(outfitId: number, oldItem: Item, newItem: Item) {
-    const updated = await swapItem(outfitId, oldItem.id, newItem.id);
+  // Swaps and renders both come back as the updated outfit.
+  function replaceOutfit(updated: StyledOutfit) {
     setResults((prev) =>
       prev && {
         ...prev,
-        outfits: prev.outfits.map((o) => (o.outfit.id === outfitId ? updated : o)),
+        outfits: prev.outfits.map((o) => (o.outfit.id === updated.outfit.id ? updated : o)),
       },
     );
+  }
+
+  async function pickAlternative(outfitId: number, oldItem: Item, newItem: Item) {
+    replaceOutfit(await swapItem(outfitId, oldItem.id, newItem.id));
     setLockedIds((prev) => prev.filter((id) => id !== oldItem.id));
     setSheetOpen(false);
   }
@@ -199,6 +206,10 @@ export default function StylePage() {
                     setSheetOpen(true);
                   }}
                   onToggleLock={toggleLock}
+                  onSeeOnMe={() => {
+                    setRenderTarget(styled);
+                    setRenderOpen(true);
+                  }}
                 />
               </div>
             ))}
@@ -235,6 +246,7 @@ export default function StylePage() {
       )}
 
       <AlternativesSheet target={target} open={sheetOpen} onOpenChange={setSheetOpen} onPick={pickAlternative} />
+      <RenderSheet styled={renderTarget} open={renderOpen} onOpenChange={setRenderOpen} onRendered={replaceOutfit} />
     </div>
   );
 }

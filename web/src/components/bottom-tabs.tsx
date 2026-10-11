@@ -9,7 +9,7 @@ const TABS = [
   { href: "/", label: "Rack", icon: Shirt, ready: true },
   { href: "/style", label: "Style", icon: Sparkles, ready: true },
   { href: "/friends", label: "Friends", icon: Users, ready: true },
-  { href: "/profile", label: "Profile", icon: User, ready: false },
+  { href: "/profile", label: "Profile", icon: User, ready: true },
 ];
 
 // Friends stays highlighted while browsing a friend's closet (/friends/user/2).

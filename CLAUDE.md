@@ -34,7 +34,7 @@ from each other. Fit matters: every item stores how it fits
 6. Later ideas (do NOT build unless asked): fit check mirror (phone
    camera logs what you're wearing), voice stylist (ElevenLabs).
 
-CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stage 3 is postponed.
+CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are built (loose ends in TODO.md).
 
 ## Stack
 - api/: Python FastAPI, SQLModel + SQLite, rembg (u2net, u2net_cloth_seg), google-genai
@@ -135,6 +135,12 @@ CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stag
 - One origin: the browser only talks to Next. web/next.config.ts rewrites /api/* -> localhost:8000/*
   and /static/* -> localhost:8000/static/*; frontend uses relative paths, the API has no CORS.
   experimental.proxyTimeout is 120s (default 30s cuts off the stylist).
+- Stage 3 ("See it on me") is built: Profile tab (app/profile/page.tsx + components/body-photo-upload.tsx,
+  also shown in the render sheet when there's no photo) -> POST /users/{id}/photo. The outfit card's
+  "See it on me" opens components/render-sheet.tsx -> POST /outfits/{id}/render[?force=true] ->
+  gemini.render_outfit (IMAGE_MODEL, prompt from render_prompt/describe_garment). Saved as
+  static/renders/<outfit_id>.png in outfits.render_path; a swap or a new body photo clears it.
+  Mock mode returns the photo with the cutouts pasted under it. One real render: ~12s, ~$0.04.
 - Phone testing: `cloudflared tunnel --url http://localhost:3000` gives an HTTPS
   *.trycloudflare.com URL (works on any network, and HTTPS lets the phone share its location).
   Plain http://<laptop LAN IP>:3000 also works but gets campus weather (no geolocation on HTTP).

@@ -76,6 +76,14 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 - [ ] Old test images from before file cleanup existed are still in `api/static/uploads/` and
       `api/static/cutouts/` (git-ignored, so only local clutter).
 
+## Stage 3 (See it on me) follow-ups
+
+- [x] **Real render of a real outfit on the user's own photo.** Outfit #64 (5 pieces) on the
+      user's seated photo took 13.1s. Pose, face and every piece came through; the background was
+      swapped for a plain studio one, as the prompt asks.
+- [ ] **Old renders stay on disk if an outfit's item is deleted.** The outfit row keeps the
+      render (and the item id); there's no outfit cleanup at all yet.
+
 ## Later (stage 3)
 
 - [ ] Clean up garments that overlapped in the photo with AI image editing instead of asking

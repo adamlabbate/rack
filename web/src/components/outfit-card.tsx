@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, LockOpen } from "lucide-react";
+import { Lock, LockOpen, Sparkles } from "lucide-react";
 import type { BorrowStatus, Item, StyledOutfit } from "@/lib/api";
 import { useBorrows } from "@/components/borrow-context";
 import { useUser } from "@/components/user-context";
@@ -81,10 +81,11 @@ type Props = {
   lockedIds: number[];
   onTapItem: (item: Item) => void;
   onToggleLock: (item: Item) => void;
+  onSeeOnMe: () => void;
 };
 
 // Flat-lay: outerwear and top up top, bottom in the middle, shoes at the bottom, accessories to the side.
-export function OutfitCard({ styled, lockedIds, onTapItem, onToggleLock }: Props) {
+export function OutfitCard({ styled, lockedIds, onTapItem, onToggleLock, onSeeOnMe }: Props) {
   const { outfit, items } = styled;
   const { users } = useUser();
   const { statusFor, askToBorrow } = useBorrows();
@@ -124,6 +125,13 @@ export function OutfitCard({ styled, lockedIds, onTapItem, onToggleLock }: Props
       <div className="px-4 py-3">
         <h2 className="text-lg font-semibold">{outfit.name}</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">{outfit.reason}</p>
+        <button
+          onClick={onSeeOnMe}
+          className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-muted font-medium active:scale-[0.98]"
+        >
+          <Sparkles className="size-4" />
+          See it on me
+        </button>
       </div>
     </article>
   );

@@ -5,6 +5,7 @@ from sqlalchemy import JSON, Column, inspect, text
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 DB_PATH = Path(__file__).parent / "rack.db"
+STATIC_DIR = Path(__file__).parent / "static"  # images, served at /static
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
 SEED_USERS = ["adam", "jake", "maya"]
@@ -85,6 +86,7 @@ class Outfit(SQLModel, table=True):
     item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
     locked_item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
     borrowed_item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))  # friends' items
+    render_path: str | None = None  # "See it on me" preview on the user's photo (stage 3)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

@@ -16,14 +16,14 @@ from sqlmodel import Session, or_, select
 import gemini
 import social
 import styling
-from db import BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, get_session, init_db
+from db import STATIC_DIR, BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
 register_heif_opener()  # lets Pillow read iPhone HEIC photos picked from the library
 
-STATIC_DIR = Path(__file__).parent / "static"
 UPLOADS_DIR = STATIC_DIR / "uploads"
 CUTOUTS_DIR = STATIC_DIR / "cutouts"
+RENDERS_DIR = STATIC_DIR / "renders"
 MAX_EDGE = 1600  # phone photos are huge; this keeps storage and background removal fast
 
 # static/ is git-ignored, so make sure the folders exist on a fresh clone
@@ -535,11 +535,68 @@ def swap_item(outfit_id: int, body: Swap, session: Session = Depends(get_session
     outfit.borrowed_item_ids = [i for i in outfit.borrowed_item_ids if i != old.id]
     if new.owner_id != outfit.user_id:
         outfit.borrowed_item_ids.append(new.id)
+    clear_render(outfit)  # it shows the old piece
     user = session.get(User, outfit.user_id)
     styling.record_swap(user, old, new)
     session.add_all([outfit, user])
     session.commit()
     session.refresh(outfit)
+    return OutfitOut(outfit=outfit, items=[session.get(Item, i) for i in outfit.item_ids])
+
+
+# ---------- See it on me (stage 3) ----------
+
+
+def clear_render(outfit: Outfit):
+    """Drop an outfit's render once it no longer matches (swapped piece, new body photo)."""
+    if outfit.render_path:
+        (STATIC_DIR / outfit.render_path.removeprefix("/static/")).unlink(missing_ok=True)
+        outfit.render_path = None
+
+
+@app.post("/users/{user_id}/photo")
+def upload_body_photo(user_id: int, file: UploadFile = File(...), session: Session = Depends(get_session)) -> User:
+    """Set (or replace) the full-body photo outfits are rendered on."""
+    user = get_user_or_404(session, user_id)
+    try:
+        img = ImageOps.exif_transpose(Image.open(file.file)).convert("RGB")
+    except (UnidentifiedImageError, OSError):
+        raise HTTPException(400, "File is not a readable image")
+
+    # A new name each time, so phones never show the old photo from cache.
+    photo_id, _, _ = save_photo(img, f"body_{user_id}_{uuid.uuid4().hex[:8]}")
+    if user.full_body_photo:
+        (STATIC_DIR / user.full_body_photo.removeprefix("/static/")).unlink(missing_ok=True)
+    user.full_body_photo = f"/static/uploads/{photo_id}.jpg"
+    # Renders of the old photo would show someone else's body now.
+    for outfit in session.exec(select(Outfit).where(Outfit.user_id == user_id, Outfit.render_path != None)):  # noqa: E711
+        clear_render(outfit)
+        session.add(outfit)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+@app.post("/outfits/{outfit_id}/render")
+def render_outfit(outfit_id: int, force: bool = False, session: Session = Depends(get_session)) -> OutfitOut:
+    """Show the outfit on the user's own photo. Reuses the saved render unless force=true."""
+    outfit = session.get(Outfit, outfit_id)
+    if not outfit:
+        raise HTTPException(404, "Outfit not found")
+    if not session.get(User, outfit.user_id).full_body_photo:
+        raise HTTPException(409, "Add a full-body photo on your Profile first")
+
+    path = RENDERS_DIR / f"{outfit_id}.png"
+    if force or not outfit.render_path or not path.exists():
+        png = gemini.render_outfit(outfit_id)
+        if png is None:
+            raise HTTPException(502, "Couldn't make your preview right now, try again in a moment")
+        path.write_bytes(png)
+        outfit.render_path = f"/static/renders/{outfit_id}.png"
+        session.add(outfit)
+        session.commit()
+        session.refresh(outfit)
     return OutfitOut(outfit=outfit, items=[session.get(Item, i) for i in outfit.item_ids])
 
 

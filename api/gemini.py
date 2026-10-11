@@ -1,3 +1,4 @@
+import io
 import logging
 import os
 import time
@@ -5,16 +6,18 @@ from typing import Literal
 
 from google import genai
 from google.genai import errors, types
+from PIL import Image, ImageDraw
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 import social
-from db import Item, engine
+from db import STATIC_DIR, Item, Outfit, User, engine
 from tools import stylist_tools
 
 log = logging.getLogger(__name__)
 
 MODEL = "gemini-3.8-flash"
+IMAGE_MODEL = "gemini-nano-banana-2.1"  # on-body renders (stage 3)
 
 # Fixed vocabularies, shared with the PATCH endpoint so user edits and AI tags agree.
 Category = Literal["top", "bottom", "shoes", "outerwear", "accessory"]
@@ -330,3 +333,125 @@ def style_outfits(
 
     valid = [o for o in outfits if not outfit_problems(o.item_ids, closet, locked_item_ids)][:3]
     return mark_borrowed(valid, owner_id, closet)
+
+
+# ---------- See it on me (stage 3) ----------
+
+# Body order for the prompt, so the model reads the outfit top to bottom.
+RENDER_ORDER = ["outerwear", "top", "bottom", "shoes", "accessory"]
+
+
+def _static_bytes(path: str) -> bytes:
+    return (STATIC_DIR / path.removeprefix("/static/")).read_bytes()
+
+
+def describe_garment(item: Item) -> str:
+    """'Bottom: cargos, olive, baggy fit, full length, mid rise.' Unknown fit fields are left out."""
+    parts = [item.subtype or item.category]
+    if item.colors:
+        parts.append(" and ".join(item.colors))
+    if item.silhouette and item.silhouette != "unknown":
+        parts.append(f"{item.silhouette} fit")
+    if item.length and item.length != "unknown":
+        parts.append(f"{item.length} length")
+    if item.category == "bottom" and item.rise and item.rise != "n_a":
+        parts.append(f"{item.rise} rise")
+    return f"{(item.category or 'item').capitalize()}: {', '.join(parts).replace('_', ' ')}."
+
+
+def render_prompt(items: list[Item], image_of: dict[int, int], worn: set[int]) -> str:
+    """The garment list with fit spelled out, plus which reference image shows each garment.
+
+    image_of maps item id -> image number (the person is image 1). Items in `worn` point at a
+    photo of someone wearing them, which also shows other clothes the model should ignore.
+    """
+    lines = [
+        "Edit image 1: change only the person's clothes, dressing them in exactly these garments.",
+        *(describe_garment(i) for i in items),
+        "Reference images:",
+    ]
+    for i in items:
+        name = (i.subtype or i.category or "item").replace("_", " ")
+        where = f"the {name} worn in image {image_of[i.id]} (use only the {name}, ignore everything else there)"
+        lines.append(f"- {where if i.id in worn else f'image {image_of[i.id]}: the {name}'}")
+    lines.append(
+        "Match colors and details from the reference images, and keep each garment's fit as described. "
+        "Everything else stays exactly as in image 1: the face, hair, skin, body shape, pose and hands, "
+        "the background, the lighting and the framing."
+    )
+    return "\n".join(lines)
+
+
+def mock_render(person: bytes, items: list[Item]) -> bytes:
+    """GEMINI_MOCK=1: the user's photo with the outfit's cutouts along the bottom, clearly labeled."""
+    photo = Image.open(io.BytesIO(person)).convert("RGB")
+    photo.thumbnail((800, 1200))
+    strip = photo.height // 5
+    canvas = Image.new("RGB", (photo.width, photo.height + strip), "white")
+    canvas.paste(photo)
+    x = 8
+    for item in items:
+        piece = Image.open(io.BytesIO(_static_bytes(item.cutout_path or item.image_path))).convert("RGBA")
+        piece.thumbnail((strip - 16, strip - 16))
+        canvas.paste(piece, (x, photo.height + 8), piece)
+        x += piece.width + 8
+    ImageDraw.Draw(canvas).text((8, 8), "MOCK PREVIEW (GEMINI_MOCK=1)", fill="red")
+    buf = io.BytesIO()
+    canvas.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def render_outfit(outfit_id: int) -> bytes | None:
+    """Nano Banana render of an outfit on its user's full-body photo, as PNG bytes.
+
+    Each garment's reference is its original worn photo (onbody_path) when it has one, otherwise its
+    cutout; garments cut from the same photo share one image. None if Gemini fails or returns no image.
+    """
+    with Session(engine) as session:
+        outfit = session.get(Outfit, outfit_id)
+        user = session.get(User, outfit.user_id)
+        items = [session.get(Item, i) for i in outfit.item_ids]
+    items = sorted(filter(None, items), key=lambda i: RENDER_ORDER.index(i.category or "accessory"))
+    person = _static_bytes(user.full_body_photo)
+
+    if os.getenv("GEMINI_MOCK") == "1":
+        time.sleep(2)
+        return mock_render(person, items)
+
+    paths: list[str] = []  # reference images after the person, deduplicated
+    image_of, worn = {}, set()
+    for item in items:
+        path = item.onbody_path or item.cutout_path or item.image_path
+        if path not in paths:
+            paths.append(path)
+        image_of[item.id] = paths.index(path) + 2
+        if item.onbody_path:
+            worn.add(item.id)
+    contents = [
+        types.Part.from_bytes(data=person, mime_type="image/jpeg"),
+        *(
+            types.Part.from_bytes(data=_static_bytes(p), mime_type="image/png" if p.endswith(".png") else "image/jpeg")
+            for p in paths
+        ),
+        render_prompt(items, image_of, worn),
+    ]
+    try:
+        response = _with_retry(
+            lambda: _get_client().models.generate_content(
+                model=IMAGE_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+            )
+        )
+        parts = response.candidates[0].content.parts if response.candidates else None
+        image = next((p.inline_data.data for p in parts or [] if p.inline_data), None)
+        if image is None:  # e.g. blocked, or the model answered in text
+            log.warning("Render returned no image: %s", response.text if parts else response.prompt_feedback)
+            return None
+    except Exception as e:
+        log.warning("Gemini render failed: %s", e)
+        return None
+    # Nano Banana answers in JPEG; store PNG so every render has the same name and type.
+    buf = io.BytesIO()
+    Image.open(io.BytesIO(image)).save(buf, "PNG")
+    return buf.getvalue()

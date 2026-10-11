@@ -4,6 +4,7 @@ export type User = {
   id: number;
   name: string;
   avatar: string | null;
+  full_body_photo: string | null; // what "See it on me" renders outfits on
 };
 
 // Same vocabularies as api/gemini.py; the API rejects anything else.
@@ -155,6 +156,7 @@ export type Outfit = {
   item_ids: number[];
   locked_item_ids: number[];
   borrowed_item_ids: number[]; // pieces that belong to a friend
+  render_path: string | null; // "See it on me" preview, once made
   created_at: string;
 };
 
@@ -185,6 +187,19 @@ export function swapItem(outfitId: number, oldItemId: number, newItemId: number)
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ old_item_id: oldItemId, new_item_id: newItemId }),
   });
+}
+
+// ---------- See it on me (stage 3) ----------
+
+export function uploadBodyPhoto(userId: number, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return request<User>(`/users/${userId}/photo`, { method: "POST", body: form });
+}
+
+// ~10-20s with Nano Banana; instant when a render is already saved (unless force).
+export function renderOutfit(outfitId: number, force = false) {
+  return request<StyledOutfit>(`/outfits/${outfitId}/render${force ? "?force=true" : ""}`, { method: "POST" });
 }
 
 // ---------- Social (stage 4) ----------

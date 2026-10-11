@@ -47,6 +47,10 @@ Built solo at HackRU for the Gemini track.
   marks it "Borrow from Jake". Tap that (or any shared piece) to send a request with a date and a
   note. The bell in the header shows requests for your clothes (accept / decline) and yours, and
   an accepted piece shows "Borrowed". Each item has a "Shared with friends" switch.
+- **See it on me**: add one full-body photo on the Profile tab, then tap "See it on me" on any
+  outfit. Nano Banana (`gemini-nano-banana-2.1`) dresses you in those exact pieces, with each
+  piece's fit (silhouette, length, rise) written into the prompt, and the result shows as an
+  "AI preview". Renders are saved, so reopening one is instant; Regenerate makes a fresh one.
 - Everything persists in SQLite plus images on disk.
 
 ## Stack
@@ -55,7 +59,7 @@ Built solo at HackRU for the Gemini track.
 | --- | --- |
 | API (`api/`) | Python 3.12, FastAPI, SQLModel + SQLite, rembg, google-genai |
 | Web (`web/`) | Next.js 16 (App Router, TypeScript), Tailwind, shadcn/ui, Base UI |
-| AI | Gemini `gemini-3.8-flash` (photo analysis and tagging, stylist agent) |
+| AI | Gemini `gemini-3.8-flash` (photo analysis and tagging, stylist agent), `gemini-nano-banana-2.1` (on-body renders) |
 
 ## Running it locally
 
@@ -110,8 +114,8 @@ share location, so the stylist uses New Brunswick, NJ weather.
 
 Set `GEMINI_MOCK=1` (in your shell or in `api/.env`) to skip the Gemini API. Every photo then
 returns the same two fake garments, and the stylist returns two outfits built from your real
-closet (top, bottom, shoes, plus a jacket if you have one), which is handy for working on the UI
-without using quota.
+closet (top, bottom, shoes, plus a jacket if you have one), and "See it on me" returns your photo
+with the outfit's cutouts under it, which is handy for working on the UI without using quota.
 
 ## How an upload works
 
@@ -147,13 +151,24 @@ without using quota.
 - `POST /borrow`, `GET /borrow?user_id=` (incoming and outgoing), and `PATCH /borrow/{id}`: the
   owner accepts or declines a pending request, and either side marks an accepted loan returned.
 
+## How "See it on me" works
+
+- `POST /users/{id}/photo` stores your full-body photo in `static/uploads/`. Replacing it deletes
+  your old renders, since they show the old photo.
+- `POST /outfits/{id}/render` sends Nano Banana your photo plus one reference image per piece:
+  the original worn photo if the piece was cut from one, otherwise its cutout (pieces cut from
+  the same photo share one image). The prompt lists each piece top to bottom with its type,
+  colors and fit, leaving out any fit Gemini marked `unknown`.
+- The result is saved as `static/renders/<outfit id>.png` and reused until you hit Regenerate
+  (`?force=true`) or swap a piece. One render takes about 10-20 seconds and costs roughly $0.04.
+
 ## Roadmap
 
 1. ~~Wardrobe~~: upload, cutouts, Gemini tags and fit, editing (done)
 2. ~~AI stylist~~: outfits from your closet, flat-lay cards, swap, lock, regenerate (done)
 3. Friends: shared closets, groups and borrow requests (built, polishing)
 4. Profiles: pinned pieces, fit pics, fit history
-5. Later: on-body renders, see an outfit on your own photo (Nano Banana)
+5. ~~See it on me~~: an outfit rendered on your own photo with Nano Banana (built)
 
 Known issues are tracked in [TODO.md](TODO.md).
 

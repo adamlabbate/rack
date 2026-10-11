@@ -9,6 +9,7 @@ type UserContextValue = {
   users: User[];
   currentUser: User | null;
   setCurrentUser: (user: User) => void;
+  updateUser: (user: User) => void; // after the API changed it (e.g. a new full-body photo)
 };
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -38,8 +39,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }
 
+  function updateUser(user: User) {
+    setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
+    setCurrentUserState((prev) => (prev?.id === user.id ? user : prev));
+  }
+
   return (
-    <UserContext.Provider value={{ users, currentUser, setCurrentUser }}>
+    <UserContext.Provider value={{ users, currentUser, setCurrentUser, updateUser }}>
       {children}
     </UserContext.Provider>
   );
