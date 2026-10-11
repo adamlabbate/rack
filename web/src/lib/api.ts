@@ -160,8 +160,9 @@ export type Outfit = {
   created_at: string;
 };
 
-// An outfit with its items expanded, in the same order as item_ids.
-export type StyledOutfit = { outfit: Outfit; items: Item[] };
+// An outfit with its items expanded, in the same order as item_ids. Deleted pieces are left out of
+// items; unavailable_item_ids also covers pieces unshared or lent to someone else since.
+export type StyledOutfit = { outfit: Outfit; items: Item[]; unavailable_item_ids: number[] };
 
 export type Alternative = { item: Item; score: number; notes: string[] };
 
@@ -173,6 +174,11 @@ export async function styleOutfits(userId: number, text: string, lockedItemIds: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, request: text, locked_item_ids: lockedItemIds, location }),
   });
+}
+
+// Saved outfits as they are now (after edits, deletes or loans elsewhere in the app).
+export function getOutfits(ids: number[]) {
+  return request<StyledOutfit[]>(`/outfits?${ids.map((id) => `ids=${id}`).join("&")}`);
 }
 
 export async function getAlternatives(itemId: number, outfitId: number) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, RefreshCw, Sparkles } from "lucide-react";
-import { styleOutfits, swapItem, type Item, type StyledOutfit } from "@/lib/api";
+import { getOutfits, styleOutfits, swapItem, type Item, type StyledOutfit } from "@/lib/api";
 import { AlternativesSheet } from "@/components/alternatives-sheet";
 import { OutfitCard } from "@/components/outfit-card";
 import { RenderSheet } from "@/components/render-sheet";
@@ -51,6 +51,22 @@ export default function StylePage() {
     lastLocked = lockedIds;
   }, [results, lockedIds]);
 
+  // Coming back to this tab: pieces may have been edited, deleted or lent out in the meantime.
+  useEffect(() => {
+    if (!lastResults) return;
+    const ids = lastResults.outfits.map((o) => o.outfit.id);
+    getOutfits(ids)
+      .then((fresh) =>
+        setResults((prev) =>
+          prev && {
+            ...prev,
+            outfits: prev.outfits.map((o) => fresh.find((f) => f.outfit.id === o.outfit.id) ?? o),
+          },
+        ),
+      )
+      .catch(() => {}); // keep what's on screen; it was right a moment ago
+  }, []);
+
   useEffect(() => {
     if (!loading) return;
     const timer = setInterval(() => setThinking((n) => (n + 1) % THINKING.length), 3500);
@@ -82,8 +98,9 @@ export default function StylePage() {
 
   function regenerate() {
     if (!mine) return;
-    // Only pieces still on screen: a locked item may have been swapped out since.
-    const shown = new Set(mine.outfits.flatMap((o) => o.outfit.item_ids));
+    // Only pieces still on screen and available: a locked item may have been swapped out or deleted since.
+    const gone = new Set(mine.outfits.flatMap((o) => o.unavailable_item_ids));
+    const shown = new Set(mine.outfits.flatMap((o) => o.outfit.item_ids).filter((id) => !gone.has(id)));
     ask(mine.request, lockedIds.filter((id) => shown.has(id)));
   }
 
@@ -206,6 +223,7 @@ export default function StylePage() {
                     setSheetOpen(true);
                   }}
                   onToggleLock={toggleLock}
+                  onRestyle={regenerate}
                   onSeeOnMe={() => {
                     setRenderTarget(styled);
                     setRenderOpen(true);

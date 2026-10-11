@@ -449,7 +449,26 @@ class OutfitOut(BaseModel):
     """A saved outfit with its items expanded, so the app can draw the flat-lay right away."""
 
     outfit: Outfit
-    items: list[Item]
+    items: list[Item]  # pieces that still exist, in item_ids order
+    # Pieces the user can't wear in it any more: deleted, unshared, or lent to someone else.
+    unavailable_item_ids: list[int] = []
+
+
+def outfit_out(session: Session, outfit: Outfit, closet: dict[int, Item] | None = None) -> OutfitOut:
+    """An outfit with its current items. Saved outfits can outlive their pieces."""
+    closet = closet if closet is not None else gemini.load_closet(outfit.user_id)
+    items = [i for i in (session.get(Item, i) for i in outfit.item_ids) if i]
+    return OutfitOut(
+        outfit=outfit, items=items, unavailable_item_ids=[i for i in outfit.item_ids if i not in closet]
+    )
+
+
+@app.get("/outfits")
+def get_outfits(ids: list[int] = Query(), session: Session = Depends(get_session)) -> list[OutfitOut]:
+    """Saved outfits as they are now, so the Style tab can refresh cards after edits elsewhere."""
+    outfits = [o for o in (session.get(Outfit, i) for i in ids) if o]
+    closets = {uid: gemini.load_closet(uid) for uid in {o.user_id for o in outfits}}
+    return [outfit_out(session, o, closets[o.user_id]) for o in outfits]
 
 
 @app.post("/stylist")
@@ -477,12 +496,10 @@ def stylist(body: StylistRequest, session: Session = Depends(get_session)) -> li
     ]
     session.add_all(outfits)
     session.commit()
-    result = []
+    closet = gemini.load_closet(body.user_id)
     for outfit in outfits:
         session.refresh(outfit)
-        items = [session.get(Item, i) for i in outfit.item_ids]  # validated: all exist
-        result.append(OutfitOut(outfit=outfit, items=items))
-    return result
+    return [outfit_out(session, o, closet) for o in outfits]
 
 
 class Alternative(BaseModel):
@@ -550,7 +567,7 @@ def swap_item(outfit_id: int, body: Swap, session: Session = Depends(get_session
     session.add_all([outfit, user])
     session.commit()
     session.refresh(outfit)
-    return OutfitOut(outfit=outfit, items=[session.get(Item, i) for i in outfit.item_ids])
+    return outfit_out(session, outfit)
 
 
 # ---------- See it on me (stage 3) ----------
@@ -598,6 +615,8 @@ def render_outfit(outfit_id: int, force: bool = False, session: Session = Depend
 
     path = RENDERS_DIR / f"{outfit_id}.png"
     if force or not outfit.render_path or not path.exists():
+        if any(i not in gemini.load_closet(outfit.user_id) for i in outfit.item_ids):
+            raise HTTPException(409, "A piece of this outfit isn't available anymore. Swap it or restyle first")
         png = gemini.render_outfit(outfit_id)
         if png is None:
             raise HTTPException(502, "Couldn't make your preview right now, try again in a moment")
@@ -606,7 +625,7 @@ def render_outfit(outfit_id: int, force: bool = False, session: Session = Depend
         session.add(outfit)
         session.commit()
         session.refresh(outfit)
-    return OutfitOut(outfit=outfit, items=[session.get(Item, i) for i in outfit.item_ids])
+    return outfit_out(session, outfit)
 
 
 # ---------- Social (stage 4) ----------

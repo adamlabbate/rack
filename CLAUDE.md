@@ -88,6 +88,9 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   (no Gemini: formality 40%, color 35%, weather 25%). POST /outfits/{id}/swap updates the outfit
   and styling.record_swap() scores tags (+1 picked, -1 dropped) in users.preferences;
   tools.get_preferences() turns that into prefers/avoids for the agent.
+- Every outfit response goes through main.outfit_out(): items that still exist, plus unavailable_item_ids
+  (not in gemini.load_closet: deleted, unshared or lent out). The Style page re-fetches its outfits with
+  GET /outfits?ids= on mount. POST /outfits/{id}/render refuses a new render (409) while a piece is unavailable.
 - Locks live in the Style page state (one per top/bottom/shoes/outerwear); Regenerate sends
   only locked IDs still on screen.
 - Stage 4 backend and frontend are built (Friends tab: app/friends/page.tsx and

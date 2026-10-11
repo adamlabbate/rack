@@ -20,8 +20,10 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 
 ## Stage 2 (AI styling) follow-ups
 
-- [ ] **Style results can go stale.** The Style tab keeps the last outfits in memory across tab
-      switches; editing or deleting one of those items in the Closet doesn't update the cards.
+- [x] **Style results can go stale.** Fixed: the Style tab re-fetches its outfits (`GET /outfits?ids=`)
+      when you come back. Edits show up; deleted pieces drop out; unshared or lent-out ones are
+      greyed "Unavailable", and the card offers Restyle instead of See it on me. Render and swap no
+      longer 500 on an outfit with a deleted piece.
 - [ ] **Alternatives use today's forecast**, not the day or weather the user typed in their
       request (e.g. "tomorrow, it's going to pour").
 - [ ] **Preferences never fade.** Swap scores only add up; an old swap counts as much as today's.
