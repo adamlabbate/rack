@@ -68,7 +68,7 @@ export function RequestsSheet({ open, onOpenChange }: Props) {
             <h3 className="mt-6 mb-2 text-sm font-medium text-muted-foreground">You asked for</h3>
             {lists.outgoing.length === 0 ? (
               <p className="py-4 text-sm text-muted-foreground">
-                Browse a friend&apos;s closet on the Friends tab to borrow something.
+                Browse a friend&apos;s Rack on the Friends tab to borrow something.
               </p>
             ) : (
               <ul className="flex flex-col gap-2">

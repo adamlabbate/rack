@@ -67,7 +67,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
       <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <Drawer.Title className="text-xl font-semibold">Swap {item.subtype ?? item.category}</Drawer.Title>
         <p className="mt-1 text-sm text-muted-foreground">
-          Other {category} from your closet and your friends&apos;, best match for this outfit first.
+          Other {category} from your Rack and your friends&apos;, best match for this outfit first.
         </p>
 
         {error && (
@@ -80,7 +80,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
           </div>
         ) : alternatives?.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            No other {category} in your closet yet.
+            No other {category} on your Rack yet.
           </p>
         ) : (
           <ul className="mt-4 flex flex-col gap-2">

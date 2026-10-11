@@ -131,8 +131,14 @@ export default function ClosetPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold capitalize">
-        {currentUser ? `${currentUser.name}'s closet` : "Closet"}
+      <h1 className="text-2xl font-semibold">
+        {currentUser ? (
+          <>
+            <span className="capitalize">{currentUser.name}</span>&apos;s Rack
+          </>
+        ) : (
+          "Your Rack"
+        )}
       </h1>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
         Best results: one item, laid flat on the floor on a plain, solid background.

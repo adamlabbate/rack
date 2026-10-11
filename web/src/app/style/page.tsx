@@ -12,7 +12,7 @@ const QUICK_PROMPTS = ["Class tomorrow", "Date night", "Career fair"];
 
 // The stylist takes 15-40s; cycle through what it's actually doing so the wait reads as progress.
 const THINKING = [
-  "Looking through your closet…",
+  "Looking through your Rack…",
   "Checking the weather…",
   "Matching fits and colors…",
   "Putting outfits together…",
@@ -123,7 +123,7 @@ export default function StylePage() {
     <div>
       <h1 className="text-2xl font-semibold">Style me</h1>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
-        Say where you&apos;re going. Gemini builds outfits from your closet.
+        Say where you&apos;re going. Gemini builds outfits from your Rack.
       </p>
 
       <form

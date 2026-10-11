@@ -56,7 +56,7 @@ function ReviewBody({ upload, onDone }: { upload: UploadResult; onDone: (outcome
           Found {detections.length} {detections.length === 1 ? "item" : "items"}
         </Drawer.Title>
         <Drawer.Description className="mt-1 text-sm text-muted-foreground">
-          Uncheck anything you don&apos;t want in your closet.
+          Uncheck anything you don&apos;t want on your Rack.
         </Drawer.Description>
 
         <ul className="mt-4 grid grid-cols-2 gap-3 pb-4">

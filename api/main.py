@@ -527,7 +527,7 @@ def swap_item(outfit_id: int, body: Swap, session: Session = Depends(get_session
     old = get_item_or_404(session, body.old_item_id)
     new = get_item_or_404(session, body.new_item_id)
     if new.id not in gemini.load_closet(outfit.user_id) or new.category != old.category:
-        raise HTTPException(400, f"Pick another {old.category} from your closet or a friend's")
+        raise HTTPException(400, f"Pick another {old.category} from your Rack or a friend's")
 
     # New lists so SQLAlchemy sees the JSON changes.
     outfit.item_ids = [new.id if i == old.id else i for i in outfit.item_ids]

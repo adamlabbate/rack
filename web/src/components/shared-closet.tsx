@@ -49,7 +49,7 @@ export function SharedCloset({ params }: { params: Promise<{ kind: string; id: s
         <ChevronLeft className="size-5" /> Friends
       </Link>
       <h1 className="text-2xl font-semibold">
-        {isGroup ? (group?.group.name ?? "Group") : <><span className="capitalize">{friendName}</span>&apos;s closet</>}
+        {isGroup ? (group?.group.name ?? "Group") : <><span className="capitalize">{friendName}</span>&apos;s Rack</>}
       </h1>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
         {isGroup ? "Everything members share with the group." : "Shared with you."} Tap a piece to borrow it.

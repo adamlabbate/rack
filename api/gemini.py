@@ -177,6 +177,8 @@ Rules for every outfit:
   ("borrow Jake's navy blazer").
 - Make 2-3 outfits that are meaningfully different (reusing pieces is fine if the closet is small).
 
+In reasons, call the user's closet their "Rack" (the app's name), e.g. "nothing on your Rack is formal enough".
+
 Answer with each outfit as: a short name (2-4 words), its item IDs, which of those IDs are borrowed, and one
 sentence on why it works."""
 
@@ -195,10 +197,10 @@ def check_request(closet: dict[int, Item], locked_item_ids: list[int]):
     """Raise ValueError if no valid outfit is possible, before spending any Gemini calls."""
     missing = [c for c in REQUIRED_CATEGORIES if not any(i.category == c for i in closet.values())]
     if missing:
-        raise ValueError(f"Add at least one {', '.join(missing)} to your closet first")
+        raise ValueError(f"Add at least one {', '.join(missing)} to your Rack first")
     unavailable = [i for i in locked_item_ids if i not in closet]
     if unavailable:
-        raise ValueError(f"Locked items {unavailable} aren't in your closet or shared with you")
+        raise ValueError(f"Locked items {unavailable} aren't on your Rack or shared with you")
     locked_categories = [closet[i].category for i in locked_item_ids]
     for category in REQUIRED_CATEGORIES:
         if locked_categories.count(category) > 1:
