@@ -39,7 +39,8 @@ class Tags(BaseModel):
     season: Season
     warmth: int = Field(ge=1, le=5, description="1 = very light, 5 = heavy winter")
     weather_ok: list[Weather] = Field(
-        description="Weather the material handles; empty if neither (suede or canvas shoes are not rain-ok)"
+        description="Shoes and outerwear only: weather the material handles; empty if neither (suede or canvas "
+        "shoes are not rain-ok). Always empty for tops, bottoms and accessories"
     )
     silhouette: Silhouette = Field(description="unknown if hidden, folded or cut off; never guess fit")
     length: Length = Field(description="unknown if hidden, folded or cut off; never guess fit")
@@ -189,9 +190,13 @@ REQUIRED_CATEGORIES = ("top", "bottom", "shoes")
 
 
 def load_closet(owner_id: int) -> dict[int, Item]:
-    """Everything the stylist may use: the user's own items plus what friends and groups share."""
+    """Everything the stylist may use: the user's own items plus what friends and groups share.
+
+    Pieces lent out to someone else are left out, the user's own included.
+    """
     with Session(engine) as session:
-        own = session.exec(select(Item).where(Item.owner_id == owner_id)).all()
+        lent = social.lent_out(session, owner_id)
+        own = session.exec(select(Item).where(Item.owner_id == owner_id, Item.id.not_in(lent))).all()
         borrowable = [item for item, _ in social.shared_items(session, owner_id)]
         return {i.id: i for i in [*own, *borrowable]}
 

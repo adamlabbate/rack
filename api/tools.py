@@ -53,7 +53,11 @@ def search_closet(
         if include_shared:
             lenders = social.lender_ids(session, owner_id)
             owners |= dict(session.exec(select(User.id, User.name).where(User.id.in_(lenders))).all())
-        query = select(Item).where(Item.owner_id.in_(owners), or_(Item.owner_id == owner_id, Item.shared))
+        query = select(Item).where(
+            Item.owner_id.in_(owners),
+            or_(Item.owner_id == owner_id, Item.shared),
+            Item.id.not_in(social.lent_out(session, owner_id)),  # the user's own lent-out pieces too
+        )
         if category:
             query = query.where(Item.category == category.lower())
         if min_formality is not None:

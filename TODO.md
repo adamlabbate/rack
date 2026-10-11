@@ -8,8 +8,11 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 
 - [x] **Jake's older items are not shared.** Items uploaded before stage 4 kept `shared = 0`;
       only new uploads default to shared. Flipped all 27 with `PATCH /items/{id} {"shared": true}`.
-- [ ] **Lent-out items still show as available.** An item on an accepted loan still appears in
-      shared closets and stylist results, for its owner and for other friends.
+- [x] **Lent-out items still show as available.** `social.lent_out()` now hides an item on an
+      accepted loan from its owner and other friends (shared closets, stylist, swaps, alternatives,
+      new borrow requests get 409). The borrower still sees it. Back once it's marked returned.
+- [ ] **Owner's Rack doesn't say an item is lent out.** It still shows in their closet grid with no
+      "Lent to Adam" badge.
 - [ ] **The career fair demo borrows everything.** Adam owns one casual tee, so all three real
       outfits were made only of Jake's or Maya's pieces. Adam needs more of his own clothes for
       "prefer own, borrow to fill gaps" to show.
@@ -49,13 +52,17 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
       cover it, or u2net drops low-contrast parts (sleeves, straps, laces). Things to try:
       bigger padding, running u2net on the whole photo and then cropping, or rembg's
       `alpha_matting` option.
-- [ ] **Odd `weather_ok` tags on accessories.** Gemini tagged a belt rain/snow-ok, so the
+- [x] **Odd `weather_ok` tags on accessories.** Fixed: `apply_tags` clears it for anything but
+      shoes and outerwear (unless the user set it), and the prompt says so. Items tagged before the
+      fix keep their old value until re-tagged.
+      Was: Gemini tagged a belt rain/snow-ok, so the
       stylist adds it as a "weather" piece. Could limit `weather_ok` to shoes and outerwear
       in the prompt, or ignore it for accessories.
 - [ ] **Shoe pairs may show up as two items.** On a full-body photo Gemini listed the left and
       right sneaker separately. The prompt now says "a pair of shoes is one garment"
       (`api/gemini.py`), but that hasn't been checked against a real photo yet.
-- [ ] **Overlap notice always shows for worn photos.** On `on_body` photos Gemini marks pants as
+- [x] **Overlap notice always shows for worn photos.** Fixed: overlap is ignored for `on_body`
+      photos in `process_photo` (no notice, no retake badge). Was: On `on_body` photos Gemini marks pants as
       overlapping because the shirt covers the waistband, so "These items overlap" appears every
       time. Possible fix: skip the overlap check when `photo_type == "on_body"`.
 - [ ] **Fit is marked confirmed too early.** If Gemini returned `unknown` silhouette and length

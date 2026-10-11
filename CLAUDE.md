@@ -94,8 +94,8 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   app/friends/[kind]/[id] -> components/shared-closet.tsx; borrow-context.tsx holds the current
   user's requests, polls every 10s and owns the request sheet; requests-sheet.tsx is the header
   bell). The root layout wraps BottomTabs in Suspense: usePathname() on a dynamic route needs it
-  with cacheComponents. api/social.py: lender_ids() (friends + group-mates)
-  and shared_items(). Items are shared by default. The stylist's closet (gemini.load_closet) is own +
+  with cacheComponents. api/social.py: lender_ids() (friends + group-mates),
+  shared_items() and lent_out() (items on an accepted loan to someone else; every closet pool skips them). Items are shared by default. The stylist's closet (gemini.load_closet) is own +
   borrowable items; search_closet(include_shared=True) adds owner_id/owner_name ("you" for own);
   mark_borrowed() sets borrowed_item_ids from ownership. Swap/alternatives with outfit_id use the
   same pool. PATCH /borrow/{id} takes {status, user_id}: owner accepts/declines pending, either

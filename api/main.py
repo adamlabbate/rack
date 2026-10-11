@@ -108,6 +108,8 @@ def make_cutout(
 
 TAG_FIELDS = list(gemini.Tags.model_fields)  # category, subtype, colors, ...
 FIT_FIELDS = {"silhouette", "length", "rise"}
+# The stylist's rain/snow rule only looks at these; a "rain-ok" belt just gets dragged into outfits.
+WEATHER_CATEGORIES = {"shoes", "outerwear"}
 
 
 def apply_tags(item: Item, tags: gemini.Tags):
@@ -115,6 +117,8 @@ def apply_tags(item: Item, tags: gemini.Tags):
     for field in TAG_FIELDS:
         if field not in item.edited_fields:
             setattr(item, field, getattr(tags, field))
+    if item.category not in WEATHER_CATEGORIES and "weather_ok" not in item.edited_fields:
+        item.weather_ok = []
 
 
 @asynccontextmanager
@@ -260,6 +264,9 @@ def process_photo(
         raise HTTPException(422, "Couldn't find any clothing in this photo")
     else:
         photo_type = analysis.photo_type
+        # Worn clothes always overlap a little (a shirt over the waistband), and cloth-seg separates
+        # them by body region anyway, so overlap only means "retake" for flat-lays and hangers.
+        overlap_matters = photo_type != "on_body"
         detections = []
         for i, garment in enumerate(analysis.garments):
             box = padded_box(garment.box_2d, img.size)
@@ -267,7 +274,8 @@ def process_photo(
             detections.append(
                 Detection(
                     index=i, preview_path=f"/static/uploads/{upload_id}_{i}.jpg", box=box,
-                    visibility=garment.visibility, overlapping=garment.overlapping, tags=garment.tags,
+                    visibility=garment.visibility, overlapping=garment.overlapping and overlap_matters,
+                    tags=garment.tags,
                 )
             )
 
@@ -498,7 +506,8 @@ def item_alternatives(
     """
     item = get_item_or_404(session, item_id)
     outfit_items = [item]
-    closet = session.exec(select(Item).where(Item.owner_id == item.owner_id)).all()
+    lent = social.lent_out(session, item.owner_id)
+    closet = session.exec(select(Item).where(Item.owner_id == item.owner_id, Item.id.not_in(lent))).all()
     if outfit_id is not None:
         outfit = session.get(Outfit, outfit_id)
         if not outfit or item_id not in outfit.item_ids:
@@ -682,6 +691,8 @@ def create_borrow(body: BorrowCreate, session: Session = Depends(get_session)) -
         raise HTTPException(400, "That's already your item")
     if not item.shared or item.owner_id not in social.lender_ids(session, body.from_user):
         raise HTTPException(403, "That item isn't shared with you")
+    if item.id in social.lent_out(session, body.from_user):
+        raise HTTPException(409, "Someone else is borrowing that right now")
     already = session.exec(
         select(BorrowRequest.id).where(
             BorrowRequest.item_id == item.id,
