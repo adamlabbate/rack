@@ -2,7 +2,7 @@
 
 **Your friends' closets, styled by Gemini. Borrow the fit instead of buying it.**
 
-**Why:** at every Rutgers career fair, formal and club shoot, students scramble for clothes
+**Why:** at every career fair, formal and club shoot, students scramble for clothes
 they'll wear once, while what they need is hanging in a friend's closet. Borrowing happens
 through messy group chats. Rack puts your friends' closets in one place and lets a Gemini
 stylist build outfits from them.
