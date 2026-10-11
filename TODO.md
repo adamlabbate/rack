@@ -6,8 +6,8 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 
 ## Stage 4 (Social) follow-ups
 
-- [ ] **Jake's older items are not shared.** Items uploaded before stage 4 kept `shared = 0`;
-      only new uploads default to shared. Flip them with `PATCH /items/{id} {"shared": true}`.
+- [x] **Jake's older items are not shared.** Items uploaded before stage 4 kept `shared = 0`;
+      only new uploads default to shared. Flipped all 27 with `PATCH /items/{id} {"shared": true}`.
 - [ ] **Lent-out items still show as available.** An item on an accepted loan still appears in
       shared closets and stylist results, for its owner and for other friends.
 - [ ] **The career fair demo borrows everything.** Adam owns one casual tee, so all three real
