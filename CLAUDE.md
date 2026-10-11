@@ -54,7 +54,9 @@ CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stag
   Pending multi-garment photos, deleted once confirmed or discarded.
 - outfits (stage 2): id, user_id, request, item_ids, reason, locked_item_ids,
   render_path, created_at
-- friendships, borrow_requests (stage 4)
+- friendships (user_id, friend_id; one row per direction), groups (id, name, kind: dorm/club/friends),
+  group_members, borrow_requests (item_id, from_user = borrower, to_user = owner, status:
+  pending/accepted/declined/returned, date_needed, note) (stage 4)
 - pins (stage 5): user_id, item_id, position
 - posts (stage 5): id, user_id, photo_path, item_ids, caption, public, created_at
 
@@ -88,6 +90,19 @@ CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stag
   tools.get_preferences() turns that into prefers/avoids for the agent.
 - Locks live in the Style page state (one per top/bottom/shoes/outerwear); Regenerate sends
   only locked IDs still on screen.
+- Stage 4 backend and frontend are built (Friends tab: app/friends/page.tsx and
+  app/friends/[kind]/[id] -> components/shared-closet.tsx; borrow-context.tsx holds the current
+  user's requests, polls every 10s and owns the request sheet; requests-sheet.tsx is the header
+  bell). The root layout wraps BottomTabs in Suspense: usePathname() on a dynamic route needs it
+  with cacheComponents. api/social.py: lender_ids() (friends + group-mates)
+  and shared_items(). Items are shared by default. The stylist's closet (gemini.load_closet) is own +
+  borrowable items; search_closet(include_shared=True) adds owner_id/owner_name ("you" for own);
+  mark_borrowed() sets borrowed_item_ids from ownership. Swap/alternatives with outfit_id use the
+  same pool. PATCH /borrow/{id} takes {status, user_id}: owner accepts/declines pending, either
+  side marks accepted -> returned.
+- api/seed_social.py seeds friends, the "Rutgers FACE" group and 9 items each for jake and maya from
+  api/seed_images/ (Nano Banana product shots) via main.save_photo/process_photo. Upload ids are
+  seed_<user>_<file>, which is how reruns skip them. Mock mode uses its MOCK_TAGS.
 - api/.env holds GEMINI_API_KEY. GEMINI_MOCK=1 (env or api/.env) makes
   analyze_photo return a fixed 2-garment result and style_outfits return 2 outfits
   from the user's real items (incl. an outerwear piece if they own one), with no API calls.

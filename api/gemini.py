@@ -8,6 +8,7 @@ from google.genai import errors, types
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
+import social
 from db import Item, engine
 from tools import stylist_tools
 
@@ -139,6 +140,9 @@ def analyze_photo(image_bytes: bytes, mime_type: str = "image/jpeg") -> PhotoAna
 class OutfitPick(BaseModel):
     name: str = Field(description="Short outfit name, 2-4 words, e.g. Rainy day clean")
     item_ids: list[int] = Field(description="IDs of every item in the outfit, exactly as the stylist wrote them")
+    borrowed_item_ids: list[int] = Field(
+        description="The IDs in item_ids that belong to a friend (owner_name is not 'you'); empty if none"
+    )
     reason: str = Field(description="One sentence on why this outfit works for the request")
 
 
@@ -146,10 +150,13 @@ class Outfits(BaseModel):
     outfits: list[OutfitPick] = Field(description="The 2-3 outfits the stylist proposed, in order")
 
 
-STYLIST_PROMPT = """You are a personal stylist building outfits only from the user's own closet.
+STYLIST_PROMPT = """You are a personal stylist building outfits from the user's closet, plus pieces their friends
+and groups share with them.
 
 Use your tools:
 - search_closet to see what the user owns. Only use item IDs that search_closet returned; never invent items.
+- search_closet with include_shared=true to also see what friends can lend; each item has an owner_name
+  ("you" for the user's own). Look at shared items whenever the user's own closet is thin for the occasion.
 - get_weather if the user didn't describe the weather. If they did, trust what they said.
 - get_preferences for what the user likes; it may be empty.
 
@@ -164,16 +171,23 @@ Rules for every outfit:
   intentional, well-known look, and then say so in the reason.
 - Prefer items with visibility full and fit_confirmed true; their tags are more reliable.
 - Locked items must appear in every outfit.
+- Prefer the user's own items. Borrow a friend's item only when it clearly improves the outfit or fills a
+  gap (e.g. no blazer or dress shoes for a career fair), and name the friend in the reason
+  ("borrow Jake's navy blazer").
 - Make 2-3 outfits that are meaningfully different (reusing pieces is fine if the closet is small).
 
-Answer with each outfit as: a short name (2-4 words), its item IDs, and one sentence on why it works."""
+Answer with each outfit as: a short name (2-4 words), its item IDs, which of those IDs are borrowed, and one
+sentence on why it works."""
 
 REQUIRED_CATEGORIES = ("top", "bottom", "shoes")
 
 
 def load_closet(owner_id: int) -> dict[int, Item]:
+    """Everything the stylist may use: the user's own items plus what friends and groups share."""
     with Session(engine) as session:
-        return {i.id: i for i in session.exec(select(Item).where(Item.owner_id == owner_id)).all()}
+        own = session.exec(select(Item).where(Item.owner_id == owner_id)).all()
+        borrowable = [item for item, _ in social.shared_items(session, owner_id)]
+        return {i.id: i for i in [*own, *borrowable]}
 
 
 def check_request(closet: dict[int, Item], locked_item_ids: list[int]):
@@ -181,9 +195,9 @@ def check_request(closet: dict[int, Item], locked_item_ids: list[int]):
     missing = [c for c in REQUIRED_CATEGORIES if not any(i.category == c for i in closet.values())]
     if missing:
         raise ValueError(f"Add at least one {', '.join(missing)} to your closet first")
-    not_owned = [i for i in locked_item_ids if i not in closet]
-    if not_owned:
-        raise ValueError(f"Locked items {not_owned} aren't in your closet")
+    unavailable = [i for i in locked_item_ids if i not in closet]
+    if unavailable:
+        raise ValueError(f"Locked items {unavailable} aren't in your closet or shared with you")
     locked_categories = [closet[i].category for i in locked_item_ids]
     for category in REQUIRED_CATEGORIES:
         if locked_categories.count(category) > 1:
@@ -197,7 +211,7 @@ def outfit_problems(item_ids: list[int], closet: dict[int, Item], locked_item_id
         problems.append("uses the same item twice")
     unknown = [i for i in item_ids if i not in closet]
     if unknown:
-        problems.append(f"uses item IDs {unknown}, which are not in this user's closet")
+        problems.append(f"uses item IDs {unknown}, which are not in the user's closet or shared with them")
     categories = [closet[i].category for i in item_ids if i in closet]
     for category in REQUIRED_CATEGORIES:
         if (count := categories.count(category)) != 1:
@@ -208,13 +222,17 @@ def outfit_problems(item_ids: list[int], closet: dict[int, Item], locked_item_id
     return problems
 
 
-def mock_outfits(closet: dict[int, Item], locked_item_ids: list[int]) -> list[OutfitPick]:
+def mock_outfits(owner_id: int, closet: dict[int, Item], locked_item_ids: list[int]) -> list[OutfitPick]:
     """GEMINI_MOCK=1: two outfits from the user's real items, rotating through each category.
 
+    Own items come first in each category, so friends' items are only borrowed to fill gaps.
     Adds an outerwear piece when the closet has one, so locking a jacket can be tried in mock mode.
     """
     categories = REQUIRED_CATEGORIES + ("outerwear",)
-    by_category = {c: sorted(i.id for i in closet.values() if i.category == c) for c in categories}
+    by_category = {
+        c: [i.id for i in sorted(closet.values(), key=lambda i: (i.owner_id != owner_id, i.id)) if i.category == c]
+        for c in categories
+    }
     by_category = {c: ids for c, ids in by_category.items() if ids}
     locked = {closet[i].category: i for i in locked_item_ids}
     extras = [i for i in locked_item_ids if closet[i].category not in categories]
@@ -223,6 +241,7 @@ def mock_outfits(closet: dict[int, Item], locked_item_ids: list[int]) -> list[Ou
             name=f"Mock fit {n + 1}",
             item_ids=[locked.get(c) or ids[n % len(ids)] for c, ids in by_category.items()] + extras,
             reason="Mock outfit (GEMINI_MOCK=1), no stylist call made.",
+            borrowed_item_ids=[],
         )
         for n in range(2)
     ]
@@ -258,8 +277,17 @@ def _log_tool_calls(chat):
     print("Stylist tool calls:", "; ".join(calls) or "none")
 
 
+def mark_borrowed(outfits: list[OutfitPick], owner_id: int, closet: dict[int, Item]) -> list[OutfitPick]:
+    """Set borrowed_item_ids from who owns each item, rather than trusting the model's list."""
+    for o in outfits:
+        o.borrowed_item_ids = [i for i in o.item_ids if closet[i].owner_id != owner_id]
+    return outfits
+
+
 def style_outfits(owner_id: int, request: str, locked_item_ids: list[int] = []) -> list[OutfitPick] | None:
     """Ask the stylist agent for 2-3 outfits and return only the ones that pass validation.
+
+    Outfits may borrow items that friends and groups share; those IDs are in borrowed_item_ids.
 
     Raises ValueError if the closet or the locked items make a valid outfit impossible.
     Returns None if Gemini can't be reached.
@@ -269,8 +297,9 @@ def style_outfits(owner_id: int, request: str, locked_item_ids: list[int] = []) 
 
     if os.getenv("GEMINI_MOCK") == "1":
         time.sleep(1)
-        outfits = mock_outfits(closet, locked_item_ids)
-        return [o for o in outfits if not outfit_problems(o.item_ids, closet, locked_item_ids)]
+        outfits = mock_outfits(owner_id, closet, locked_item_ids)
+        valid = [o for o in outfits if not outfit_problems(o.item_ids, closet, locked_item_ids)]
+        return mark_borrowed(valid, owner_id, closet)
 
     message = f"Request: {request}"
     if locked_item_ids:
@@ -294,4 +323,5 @@ def style_outfits(owner_id: int, request: str, locked_item_ids: list[int] = []) 
         log.warning("Gemini stylist failed: %s", e)
         return None
 
-    return [o for o in outfits if not outfit_problems(o.item_ids, closet, locked_item_ids)][:3]
+    valid = [o for o in outfits if not outfit_problems(o.item_ids, closet, locked_item_ids)][:3]
+    return mark_borrowed(valid, owner_id, closet)

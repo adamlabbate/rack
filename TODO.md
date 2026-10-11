@@ -4,6 +4,17 @@ Backlog for the user to prioritize. Don't start these without being asked.
 
 Known issues and loose ends, to fix when there's time. Newest at the top of each section.
 
+## Stage 4 (Social) follow-ups
+
+- [ ] **Jake's older items are not shared.** Items uploaded before stage 4 kept `shared = 0`;
+      only new uploads default to shared. Flip them with `PATCH /items/{id} {"shared": true}`.
+- [ ] **Lent-out items still show as available.** An item on an accepted loan still appears in
+      shared closets and stylist results, for its owner and for other friends.
+- [ ] **The career fair demo borrows everything.** Adam owns one casual tee, so all three real
+      outfits were made only of Jake's or Maya's pieces. Adam needs more of his own clothes for
+      "prefer own, borrow to fill gaps" to show.
+- [ ] **No auth on borrow actions.** `PATCH /borrow/{id}` trusts the `user_id` in the body.
+
 ## Stage 2 (AI styling) follow-ups
 
 - [ ] **Style results can go stale.** The Style tab keeps the last outfits in memory across tab

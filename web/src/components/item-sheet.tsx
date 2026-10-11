@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Drawer } from "@base-ui/react/drawer";
-import { Camera, Check, CloudRain, Loader2, Plus, Snowflake, Sparkles, Trash2, X } from "lucide-react";
+import { Camera, Check, CloudRain, Loader2, Plus, Snowflake, Sparkles, Trash2, Users, X } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import {
   CATEGORIES,
@@ -65,10 +65,11 @@ function SheetBody({
   function save(changes: ItemUpdate) {
     const before = item;
     const touchesFit = FIT_FIELDS.some((f) => f in changes) || changes.fit_confirmed;
+    const onlySharing = Object.keys(changes).every((k) => k === "shared"); // not a tag edit
     onItemChange({
       ...item,
       ...changes,
-      user_edited: true,
+      user_edited: onlySharing ? item.user_edited : true,
       fit_confirmed: touchesFit ? true : item.fit_confirmed,
     });
     setError(null);
@@ -137,6 +138,34 @@ function SheetBody({
         {error && (
           <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
         )}
+
+        <button
+          role="switch"
+          aria-checked={item.shared}
+          onClick={() => save({ shared: !item.shared })}
+          className="mt-3 flex w-full items-center gap-3 rounded-xl bg-muted px-3 py-2.5 text-left"
+        >
+          <Users className="size-5 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Shared with friends</span>
+            <span className="block text-xs text-muted-foreground">
+              {item.shared ? "Friends and groups can see it and ask to borrow it" : "Only you can see it"}
+            </span>
+          </span>
+          <span
+            className={cn(
+              "flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors",
+              item.shared ? "bg-primary" : "bg-muted-foreground/30",
+            )}
+          >
+            <span
+              className={cn(
+                "size-6 rounded-full bg-background shadow-sm transition-transform",
+                item.shared && "translate-x-5",
+              )}
+            />
+          </span>
+        </button>
 
         {item.needs_retake && (
           <p className="mt-3 flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">

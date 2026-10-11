@@ -1,7 +1,9 @@
 import io
 import uuid
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -13,8 +15,9 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, or_, select
 
 import gemini
+import social
 import styling
-from db import Item, Outfit, Upload, User, get_session, init_db
+from db import BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
 register_heif_opener()  # lets Pillow read iPhone HEIC photos picked from the library
@@ -233,14 +236,26 @@ def create_upload(
         img = ImageOps.exif_transpose(img).convert("RGB")  # phones store rotation in EXIF
     except (UnidentifiedImageError, OSError):
         raise HTTPException(400, "File is not a readable image")
-    img.thumbnail((MAX_EDGE, MAX_EDGE))
 
-    upload_id = uuid.uuid4().hex
+    upload_id, img, jpeg = save_photo(img)
+    return process_photo(session, owner_id, upload_id, img, gemini.analyze_photo(jpeg))
+
+
+def save_photo(img: Image.Image, upload_id: str | None = None) -> tuple[str, Image.Image, bytes]:
+    """Shrink and store a new photo. Returns its upload id, the shrunk image and its JPEG bytes."""
+    upload_id = upload_id or uuid.uuid4().hex
+    img = img.copy()
+    img.thumbnail((MAX_EDGE, MAX_EDGE))
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=90)
     (UPLOADS_DIR / f"{upload_id}.jpg").write_bytes(buf.getvalue())
+    return upload_id, img, buf.getvalue()
 
-    analysis = gemini.analyze_photo(buf.getvalue())
+
+def process_photo(
+    session: Session, owner_id: int, upload_id: str, img: Image.Image, analysis: gemini.PhotoAnalysis | None
+) -> UploadResult:
+    """Crop and cut out the garments Gemini found. Also used by seed_social.py."""
     if analysis is None:
         # Gemini unreachable: keep the whole photo as one untagged item rather than failing.
         photo_type = "flat_lay"
@@ -335,6 +350,7 @@ class ItemUpdate(BaseModel):
     rise: gemini.Rise | None = None
     custom_tags: list[str] | None = None
     fit_confirmed: bool | None = None  # "fit looks right" without changing anything
+    shared: bool | None = None  # show it to friends and groups (not a tag)
 
 
 def clean_list(values: list[str]) -> list[str]:
@@ -353,7 +369,12 @@ def get_item_or_404(session: Session, item_id: int) -> Item:
 def update_item(item_id: int, update: ItemUpdate, session: Session = Depends(get_session)) -> Item:
     item = get_item_or_404(session, item_id)
     changes = update.model_dump(exclude_unset=True)
+    if "shared" in changes:
+        item.shared = bool(changes.pop("shared"))
     if not changes:
+        session.add(item)
+        session.commit()
+        session.refresh(item)
         return item
 
     for field in ("colors", "custom_tags"):
@@ -443,7 +464,7 @@ def stylist(body: StylistRequest, session: Session = Depends(get_session)) -> li
     outfits = [
         Outfit(
             user_id=body.user_id, request=body.request.strip(), name=p.name, reason=p.reason,
-            item_ids=p.item_ids, locked_item_ids=locked,
+            item_ids=p.item_ids, locked_item_ids=locked, borrowed_item_ids=p.borrowed_item_ids,
         )
         for p in picks
     ]
@@ -467,18 +488,20 @@ class Alternative(BaseModel):
 def item_alternatives(
     item_id: int, outfit_id: int | None = None, session: Session = Depends(get_session)
 ) -> list[Alternative]:
-    """Same-category items from the owner's closet that could replace this one, best first.
+    """Same-category items that could replace this one, best first.
 
-    With outfit_id they're judged against the rest of that outfit, otherwise against the item.
+    With outfit_id they come from the outfit owner's closet plus what friends share with them, judged
+    against the rest of that outfit. Otherwise from the item owner's closet, judged against the item.
     """
     item = get_item_or_404(session, item_id)
     outfit_items = [item]
+    closet = session.exec(select(Item).where(Item.owner_id == item.owner_id)).all()
     if outfit_id is not None:
         outfit = session.get(Outfit, outfit_id)
         if not outfit or item_id not in outfit.item_ids:
             raise HTTPException(404, "Item isn't in that outfit")
         outfit_items = [i for i in (session.get(Item, i) for i in outfit.item_ids) if i]
-    closet = session.exec(select(Item).where(Item.owner_id == item.owner_id)).all()
+        closet = list(gemini.load_closet(outfit.user_id).values())
     return styling.rank_alternatives(item, closet, outfit_items)
 
 
@@ -499,15 +522,169 @@ def swap_item(outfit_id: int, body: Swap, session: Session = Depends(get_session
         raise HTTPException(400, "That item is already in this outfit")
     old = get_item_or_404(session, body.old_item_id)
     new = get_item_or_404(session, body.new_item_id)
-    if new.owner_id != outfit.user_id or new.category != old.category:
-        raise HTTPException(400, f"Pick another {old.category} from your closet")
+    if new.id not in gemini.load_closet(outfit.user_id) or new.category != old.category:
+        raise HTTPException(400, f"Pick another {old.category} from your closet or a friend's")
 
     # New lists so SQLAlchemy sees the JSON changes.
     outfit.item_ids = [new.id if i == old.id else i for i in outfit.item_ids]
     outfit.locked_item_ids = [i for i in outfit.locked_item_ids if i != old.id]
+    outfit.borrowed_item_ids = [i for i in outfit.borrowed_item_ids if i != old.id]
+    if new.owner_id != outfit.user_id:
+        outfit.borrowed_item_ids.append(new.id)
     user = session.get(User, outfit.user_id)
     styling.record_swap(user, old, new)
     session.add_all([outfit, user])
     session.commit()
     session.refresh(outfit)
     return OutfitOut(outfit=outfit, items=[session.get(Item, i) for i in outfit.item_ids])
+
+
+# ---------- Social (stage 4) ----------
+
+
+def get_user_or_404(session: Session, user_id: int) -> User:
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(404, "Unknown user")
+    return user
+
+
+@app.get("/users/{user_id}/friends")
+def list_friends(user_id: int, session: Session = Depends(get_session)) -> list[User]:
+    get_user_or_404(session, user_id)
+    ids = social.friend_ids(session, user_id)
+    return session.exec(select(User).where(User.id.in_(ids)).order_by(User.name)).all()
+
+
+class GroupOut(BaseModel):
+    group: Group
+    members: list[User]
+
+
+@app.get("/users/{user_id}/groups")
+def list_groups(user_id: int, session: Session = Depends(get_session)) -> list[GroupOut]:
+    get_user_or_404(session, user_id)
+    groups = session.exec(
+        select(Group).join(GroupMember).where(GroupMember.user_id == user_id).order_by(Group.name)
+    ).all()
+    return [
+        GroupOut(
+            group=g,
+            members=session.exec(select(User).join(GroupMember).where(GroupMember.group_id == g.id)).all(),
+        )
+        for g in groups
+    ]
+
+
+class SharedItem(BaseModel):
+    item: Item
+    owner_name: str
+
+
+@app.get("/closet/shared")
+def shared_closet(user_id: int, session: Session = Depends(get_session)) -> list[SharedItem]:
+    """Every shared item from the user's friends and groups."""
+    get_user_or_404(session, user_id)
+    return [SharedItem(item=item, owner_name=name) for item, name in social.shared_items(session, user_id)]
+
+
+class BorrowCreate(BaseModel):
+    item_id: int
+    from_user: int  # the borrower; the item's owner is the recipient
+    date_needed: date | None = None
+    note: str | None = None
+
+
+class BorrowOut(BaseModel):
+    """A borrow request with its item and both names, ready for the app to show."""
+
+    request: BorrowRequest
+    item: Item
+    from_name: str
+    to_name: str
+
+
+def borrow_out(session: Session, req: BorrowRequest) -> BorrowOut:
+    return BorrowOut(
+        request=req,
+        item=session.get(Item, req.item_id),
+        from_name=session.get(User, req.from_user).name,
+        to_name=session.get(User, req.to_user).name,
+    )
+
+
+@app.post("/borrow")
+def create_borrow(body: BorrowCreate, session: Session = Depends(get_session)) -> BorrowOut:
+    get_user_or_404(session, body.from_user)
+    item = get_item_or_404(session, body.item_id)
+    if item.owner_id == body.from_user:
+        raise HTTPException(400, "That's already your item")
+    if not item.shared or item.owner_id not in social.lender_ids(session, body.from_user):
+        raise HTTPException(403, "That item isn't shared with you")
+    already = session.exec(
+        select(BorrowRequest.id).where(
+            BorrowRequest.item_id == item.id,
+            BorrowRequest.from_user == body.from_user,
+            BorrowRequest.status.in_(["pending", "accepted"]),
+        )
+    ).first()
+    if already:
+        raise HTTPException(409, "You already asked to borrow this")
+
+    req = BorrowRequest(
+        item_id=item.id, from_user=body.from_user, to_user=item.owner_id,
+        date_needed=body.date_needed, note=(body.note or "").strip() or None,
+    )
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    return borrow_out(session, req)
+
+
+class BorrowLists(BaseModel):
+    incoming: list[BorrowOut]  # others asking for this user's items
+    outgoing: list[BorrowOut]  # this user asking for others' items
+
+
+@app.get("/borrow")
+def list_borrows(user_id: int, session: Session = Depends(get_session)) -> BorrowLists:
+    get_user_or_404(session, user_id)
+
+    def requests(column) -> list[BorrowOut]:
+        rows = session.exec(
+            select(BorrowRequest).where(column == user_id).order_by(BorrowRequest.created_at.desc())
+        ).all()
+        return [borrow_out(session, r) for r in rows]
+
+    return BorrowLists(incoming=requests(BorrowRequest.to_user), outgoing=requests(BorrowRequest.from_user))
+
+
+class BorrowUpdate(BaseModel):
+    status: Literal["accepted", "declined", "returned"]
+    user_id: int  # who is acting (no real auth yet)
+
+
+# status -> (statuses it can come from, who may set it)
+BORROW_TRANSITIONS = {
+    "accepted": (("pending",), "owner"),
+    "declined": (("pending",), "owner"),
+    "returned": (("accepted",), "either"),
+}
+
+
+@app.patch("/borrow/{borrow_id}")
+def update_borrow(borrow_id: int, body: BorrowUpdate, session: Session = Depends(get_session)) -> BorrowOut:
+    """Owner accepts or declines a pending request; either side marks an accepted loan returned."""
+    req = session.get(BorrowRequest, borrow_id)
+    if not req:
+        raise HTTPException(404, "Borrow request not found")
+    allowed_from, who = BORROW_TRANSITIONS[body.status]
+    if body.user_id != req.to_user and (who == "owner" or body.user_id != req.from_user):
+        raise HTTPException(403, "Only the owner can do that" if who == "owner" else "Not your request")
+    if req.status not in allowed_from:
+        raise HTTPException(409, f"Can't mark a {req.status} request {body.status}")
+    req.status = body.status
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    return borrow_out(session, req)

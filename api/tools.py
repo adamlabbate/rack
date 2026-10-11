@@ -7,8 +7,9 @@ model can only ever look at the closet of the user it is styling.
 import functools
 import inspect
 
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
+import social
 from db import Item, User, engine
 
 
@@ -20,6 +21,7 @@ def search_closet(
     max_formality: int | None = None,
     silhouette: str | None = None,
     weather: str | None = None,
+    include_shared: bool = False,
 ) -> list[dict]:
     """Search the user's closet. Call with no filters to see everything.
 
@@ -30,15 +32,22 @@ def search_closet(
         max_formality: highest formality to include, 1 to 5.
         silhouette: slim, straight, relaxed, baggy, wide_leg, boxy, oversized or regular.
         weather: rain or snow; only items whose material handles it.
+        include_shared: also return items the user's friends and groups share, which the user can
+            borrow.
 
     Returns:
         One dict per item: id, category, subtype, colors, style, formality, warmth (1 very light
         to 5 heavy winter), weather_ok, silhouette, length, rise, visibility (full, partial or
         unknown: how much of the garment the photo showed) and fit_confirmed (the user checked
-        the fit tags).
+        the fit tags). With include_shared, every item also has owner_id and owner_name ("you" for
+        the user's own items; anything else has to be borrowed from that person).
     """
     with Session(engine) as session:
-        query = select(Item).where(Item.owner_id == owner_id)
+        owners = {owner_id: "you"}
+        if include_shared:
+            lenders = social.lender_ids(session, owner_id)
+            owners |= dict(session.exec(select(User.id, User.name).where(User.id.in_(lenders))).all())
+        query = select(Item).where(Item.owner_id.in_(owners), or_(Item.owner_id == owner_id, Item.shared))
         if category:
             query = query.where(Item.category == category.lower())
         if min_formality is not None:
@@ -57,6 +66,7 @@ def search_closet(
 
     return [
         {
+            **({"owner_id": i.owner_id, "owner_name": owners[i.owner_id]} if include_shared else {}),
             "id": i.id,
             "category": i.category,
             "subtype": i.subtype,

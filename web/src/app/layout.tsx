@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "@/components/app-header";
-import { BottomTabs } from "@/components/bottom-tabs";
+import { BorrowProvider } from "@/components/borrow-context";
+import { BottomTabs, TabBar } from "@/components/bottom-tabs";
 import { UserProvider } from "@/components/user-context";
 import "./globals.css";
 
@@ -31,13 +33,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full bg-background">
         <UserProvider>
-          <div className="mx-auto flex min-h-dvh max-w-md flex-col">
-            <AppHeader />
-            <main className="flex-1 px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
-              {children}
-            </main>
-          </div>
-          <BottomTabs />
+          <BorrowProvider>
+            <div className="mx-auto flex min-h-dvh max-w-md flex-col">
+              <AppHeader />
+              <main className="flex-1 px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+                {children}
+              </main>
+            </div>
+            {/* usePathname() is request data on dynamic routes like /friends/user/2, so it needs Suspense. */}
+            <Suspense fallback={<TabBar pathname={null} />}>
+              <BottomTabs />
+            </Suspense>
+          </BorrowProvider>
         </UserProvider>
       </body>
     </html>

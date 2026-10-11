@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import JSON, Column, inspect, text
@@ -55,7 +55,7 @@ class Item(SQLModel, table=True):
     needs_retake: bool = False  # added from a photo where it overlapped another garment
     visibility: str | None = None  # full / partial: how much of it the photo showed
 
-    shared: bool = False
+    shared: bool = True  # friends and group-mates can see it and ask to borrow it
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -84,6 +84,48 @@ class Outfit(SQLModel, table=True):
     reason: str
     item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
     locked_item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
+    borrowed_item_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))  # friends' items
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Friendship(SQLModel, table=True):
+    """Stored in both directions (adam->jake and jake->adam), so lookups only check user_id."""
+
+    __tablename__ = "friendships"
+
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    friend_id: int = Field(foreign_key="users.id", primary_key=True)
+
+
+class Group(SQLModel, table=True):
+    """A shared closet: a dorm floor, a club like FACE, or a friend group."""
+
+    __tablename__ = "groups"
+
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(unique=True)
+    kind: str  # dorm / club / friends
+
+
+class GroupMember(SQLModel, table=True):
+    __tablename__ = "group_members"
+
+    group_id: int = Field(foreign_key="groups.id", primary_key=True)
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+
+
+class BorrowRequest(SQLModel, table=True):
+    """from_user asks to borrow to_user's item."""
+
+    __tablename__ = "borrow_requests"
+
+    id: int | None = Field(default=None, primary_key=True)
+    item_id: int = Field(foreign_key="items.id", index=True)
+    from_user: int = Field(foreign_key="users.id", index=True)  # borrower
+    to_user: int = Field(foreign_key="users.id", index=True)  # owner
+    status: str = "pending"  # pending / accepted / declined / returned
+    date_needed: date | None = None
+    note: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

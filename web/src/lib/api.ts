@@ -78,6 +78,7 @@ export type ItemUpdate = Partial<
     | "rise"
     | "custom_tags"
     | "fit_confirmed"
+    | "shared"
   >
 >;
 
@@ -160,6 +161,7 @@ export type Outfit = {
   reason: string;
   item_ids: number[];
   locked_item_ids: number[];
+  borrowed_item_ids: number[]; // pieces that belong to a friend
   created_at: string;
 };
 
@@ -186,5 +188,61 @@ export function swapItem(outfitId: number, oldItemId: number, newItemId: number)
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ old_item_id: oldItemId, new_item_id: newItemId }),
+  });
+}
+
+// ---------- Social (stage 4) ----------
+
+export type Group = { id: number; name: string; kind: "dorm" | "club" | "friends" };
+export type GroupWithMembers = { group: Group; members: User[] };
+export type SharedItem = { item: Item; owner_name: string };
+
+export type BorrowStatus = "pending" | "accepted" | "declined" | "returned";
+
+export type BorrowRequest = {
+  id: number;
+  item_id: number;
+  from_user: number; // borrower
+  to_user: number; // owner
+  status: BorrowStatus;
+  date_needed: string | null; // YYYY-MM-DD
+  note: string | null;
+  created_at: string;
+};
+
+// A request with its item and both names.
+export type Borrow = { request: BorrowRequest; item: Item; from_name: string; to_name: string };
+export type BorrowLists = { incoming: Borrow[]; outgoing: Borrow[] };
+
+export function getFriends(userId: number) {
+  return request<User[]>(`/users/${userId}/friends`);
+}
+
+export function getGroups(userId: number) {
+  return request<GroupWithMembers[]>(`/users/${userId}/groups`);
+}
+
+// Every shared item from the user's friends and groups.
+export function getSharedCloset(userId: number) {
+  return request<SharedItem[]>(`/closet/shared?user_id=${userId}`);
+}
+
+export function getBorrows(userId: number) {
+  return request<BorrowLists>(`/borrow?user_id=${userId}`);
+}
+
+export function requestBorrow(itemId: number, fromUser: number, dateNeeded: string | null, note: string) {
+  return request<Borrow>("/borrow", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item_id: itemId, from_user: fromUser, date_needed: dateNeeded, note }),
+  });
+}
+
+export function updateBorrow(id: number, status: "accepted" | "declined" | "returned", userId: number) {
+  return request<Borrow>(`/borrow/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status, user_id: userId }),
   });
 }

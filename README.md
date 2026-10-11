@@ -41,6 +41,12 @@ Built solo at HackRU for the Gemini track.
   get new outfits built around them.
 - **It learns from swaps**: every swap records what you picked over what you dropped
   (silhouette, length, style, colors), and the stylist reads those preferences next time.
+- **Borrow from friends**: friends and groups (a dorm floor, a club, a friend group) share
+  closets. The Friends tab lists them; tap one to browse what they share. The stylist can borrow
+  a friend's piece when it fills a gap, like Jake's blazer for a career fair, and the outfit card
+  marks it "Borrow from Jake". Tap that (or any shared piece) to send a request with a date and a
+  note. The bell in the header shows requests for your clothes (accept / decline) and yours, and
+  an accepted piece shows "Borrowed". Each item has a "Shared with friends" switch.
 - Everything persists in SQLite plus images on disk.
 
 ## Stack
@@ -79,6 +85,12 @@ npm run dev -- -H 0.0.0.0
 
 Open http://localhost:3000.
 
+**Demo friends (optional).** `python seed_social.py` (in `api/`, venv active) makes jake and maya
+adam's friends, puts all three in a "Rutgers FACE" group, and gives jake and maya 9 dressier
+pieces each from `api/seed_images/` (product photos generated with Nano Banana), run through the
+normal upload pipeline. It's safe to run twice. With `GEMINI_MOCK=1` it uses built-in tags
+instead of calling Gemini.
+
 **3. On your phone**
 
 Put your phone on the same Wi-Fi as your laptop, find the laptop's IP with
@@ -111,11 +123,24 @@ without using quota.
    40% formality match with the rest of the outfit, 35% color compatibility, 25% weather fit.
 4. `POST /outfits/{id}/swap` saves the swap and updates your preferences.
 
+## How sharing works
+
+- Items are shared by default (`PATCH /items/{id} {"shared": false}` hides one). You can borrow
+  any shared item owned by a friend or by someone in one of your groups.
+- `GET /users/{id}/friends`, `GET /users/{id}/groups` and `GET /closet/shared?user_id=` (every
+  item you can borrow, with its owner's name).
+- The stylist's `search_closet` takes `include_shared=true` and then marks each item with its
+  owner. The prompt says to prefer your own pieces and borrow only to fill a gap or clearly
+  improve the outfit. Code works out which pieces are borrowed (`borrowed_item_ids`) instead of
+  trusting the model.
+- `POST /borrow`, `GET /borrow?user_id=` (incoming and outgoing), and `PATCH /borrow/{id}`: the
+  owner accepts or declines a pending request, and either side marks an accepted loan returned.
+
 ## Roadmap
 
 1. ~~Wardrobe~~: upload, cutouts, Gemini tags and fit, editing (done)
 2. ~~AI stylist~~: outfits from your closet, flat-lay cards, swap, lock, regenerate (done)
-3. Friends: shared closets and borrow requests (next)
+3. Friends: shared closets, groups and borrow requests (built, polishing)
 4. Profiles: pinned pieces, fit pics, fit history
 5. Later: on-body renders, see an outfit on your own photo (Nano Banana)
 

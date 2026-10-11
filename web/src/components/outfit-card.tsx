@@ -1,7 +1,9 @@
 "use client";
 
 import { Lock, LockOpen } from "lucide-react";
-import { imageUrl, type Item, type StyledOutfit } from "@/lib/api";
+import { imageUrl, type BorrowStatus, type Item, type StyledOutfit } from "@/lib/api";
+import { useBorrows } from "@/components/borrow-context";
+import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
 
 // "baggy · full · mid rise": the fit tags worth showing, skipping unknown ones.
@@ -17,11 +19,13 @@ function fitLabel(item: Item) {
 type PieceProps = {
   item: Item;
   locked: boolean;
+  // Set for a friend's piece: whose it is and how far the borrow request got.
+  borrow: { owner: string; status: BorrowStatus | null; onRequest: () => void } | null;
   onTap: (item: Item) => void;
   onToggleLock: (item: Item) => void;
 };
 
-function Piece({ item, locked, onTap, onToggleLock }: PieceProps) {
+function Piece({ item, locked, borrow, onTap, onToggleLock }: PieceProps) {
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1">
       <button
@@ -49,6 +53,25 @@ function Piece({ item, locked, onTap, onToggleLock }: PieceProps) {
       >
         {locked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}
       </button>
+      {borrow && (
+        <button
+          onClick={borrow.onRequest}
+          className={cn(
+            "absolute -top-1 -left-1 h-7 max-w-[calc(100%-2rem)] truncate rounded-full px-2 text-[11px] font-medium shadow-sm",
+            borrow.status === "accepted"
+              ? "bg-emerald-600 text-white"
+              : borrow.status === "pending"
+                ? "bg-amber-100 text-amber-800"
+                : "bg-background/90 text-foreground",
+          )}
+        >
+          {borrow.status === "accepted"
+            ? "Borrowed"
+            : borrow.status === "pending"
+              ? "Requested"
+              : <>Borrow from <span className="capitalize">{borrow.owner}</span></>}
+        </button>
+      )}
     </div>
   );
 }
@@ -63,12 +86,23 @@ type Props = {
 // Flat-lay: outerwear and top up top, bottom in the middle, shoes at the bottom, accessories to the side.
 export function OutfitCard({ styled, lockedIds, onTapItem, onToggleLock }: Props) {
   const { outfit, items } = styled;
+  const { users } = useUser();
+  const { statusFor, askToBorrow } = useBorrows();
   const of = (category: string) => items.filter((i) => i.category === category);
   const piece = (item: Item) => (
     <Piece
       key={item.id}
       item={item}
       locked={lockedIds.includes(item.id)}
+      borrow={
+        item.owner_id === outfit.user_id
+          ? null
+          : {
+              owner: users.find((u) => u.id === item.owner_id)?.name ?? "a friend",
+              status: statusFor(item.id),
+              onRequest: () => askToBorrow(item),
+            }
+      }
       onTap={onTapItem}
       onToggleLock={onToggleLock}
     />

@@ -12,19 +12,11 @@ import {
   type Item,
   type UploadResult,
 } from "@/lib/api";
+import { CategoryFilter, FILTERS } from "@/components/category-filter";
 import { DetectionsSheet, type ReviewOutcome } from "@/components/detections-sheet";
 import { ItemSheet } from "@/components/item-sheet";
 import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
-
-const FILTERS: { label: string; category: Category | null }[] = [
-  { label: "All", category: null },
-  { label: "Tops", category: "top" },
-  { label: "Bottoms", category: "bottom" },
-  { label: "Shoes", category: "shoes" },
-  { label: "Outerwear", category: "outerwear" },
-  { label: "Accessories", category: "accessory" },
-];
 
 export default function ClosetPage() {
   const { currentUser } = useUser();
@@ -151,21 +143,7 @@ export default function ClosetPage() {
         <p className="mb-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
-        {FILTERS.map(({ label, category }) => (
-          <button
-            key={label}
-            onClick={() => setFilter(category)}
-            aria-pressed={filter === category}
-            className={cn(
-              "h-10 shrink-0 rounded-full px-4 text-sm font-medium transition-colors",
-              filter === category ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <CategoryFilter value={filter} onChange={setFilter} />
 
       {items === null && !error ? (
         <div className="flex justify-center py-16 text-muted-foreground">

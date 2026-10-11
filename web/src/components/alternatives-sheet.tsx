@@ -5,6 +5,7 @@ import { Drawer } from "@base-ui/react/drawer";
 import { Loader2 } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import { getAlternatives, imageUrl, type Alternative, type Item } from "@/lib/api";
+import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
 
 const PLURAL: Record<string, string> = {
@@ -37,6 +38,9 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
   const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [swapping, setSwapping] = useState<number | null>(null);
+  const { users, currentUser } = useUser();
+  const ownerOf = (alt: Alternative) =>
+    alt.item.owner_id === currentUser?.id ? null : users.find((u) => u.id === alt.item.owner_id)?.name;
 
   useEffect(() => {
     getAlternatives(item.id, outfitId)
@@ -63,7 +67,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
       <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <Drawer.Title className="text-xl font-semibold">Swap {item.subtype ?? item.category}</Drawer.Title>
         <p className="mt-1 text-sm text-muted-foreground">
-          Other {category} from your closet, best match for this outfit first.
+          Other {category} from your closet and your friends&apos;, best match for this outfit first.
         </p>
 
         {error && (
@@ -101,6 +105,11 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
                       {[alt.item.colors[0], alt.item.subtype].filter(Boolean).join(" ")}
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
+                      {ownerOf(alt) && (
+                        <span className="rounded-full bg-foreground px-2 py-0.5 text-xs text-background capitalize">
+                          {ownerOf(alt)}&apos;s
+                        </span>
+                      )}
                       {alt.notes.map((note) => (
                         <span key={note} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                           {note}
