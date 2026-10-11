@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, LocateFixed, MapPin } from "lucide-react";
-import { updateProfile } from "@/lib/api";
+import { removeAvatar, updateProfile, uploadAvatar } from "@/lib/api";
 import { requestLocation, type LocationError } from "@/lib/location";
+import { Avatar } from "@/components/avatar";
 import { useUser } from "@/components/user-context";
 
 const BIO_MAX = 200; // same limit as the API
@@ -22,11 +23,12 @@ export function ProfileSettings() {
   const { currentUser, updateUser } = useUser();
   const [bio, setBio] = useState(currentUser?.bio ?? "");
   const [city, setCity] = useState("");
-  const [busy, setBusy] = useState<"bio" | "city" | "device" | null>(null);
+  const [busy, setBusy] = useState<"avatar" | "bio" | "city" | "device" | null>(null);
+  const avatarInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   if (!currentUser) return null;
 
-  async function run(kind: "bio" | "city" | "device", action: () => Promise<string>) {
+  async function run(kind: NonNullable<typeof busy>, action: () => Promise<string>) {
     setBusy(kind);
     setMessage(null);
     try {
@@ -37,6 +39,22 @@ export function ProfileSettings() {
       setBusy(null);
     }
   }
+
+  async function pickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow picking the same photo again
+    if (!file) return;
+    await run("avatar", async () => {
+      updateUser(await uploadAvatar(currentUser!.id, file));
+      return "Profile picture saved";
+    });
+  }
+
+  const deleteAvatar = () =>
+    run("avatar", async () => {
+      updateUser(await removeAvatar(currentUser.id));
+      return "Profile picture removed";
+    });
 
   const saveBio = () =>
     run("bio", async () => {
@@ -63,6 +81,39 @@ export function ProfileSettings() {
 
   return (
     <div className="flex flex-col gap-6">
+      <section>
+        <h2 className="text-sm font-medium">Profile picture</h2>
+        <div className="mt-2 flex items-center gap-4">
+          <div className="relative">
+            <Avatar user={currentUser} className="size-20 text-3xl" />
+            {busy === "avatar" && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60">
+                <Loader2 className="size-6 animate-spin" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <button
+              onClick={() => avatarInput.current?.click()}
+              disabled={busy !== null}
+              className="h-10 rounded-full bg-muted text-sm font-medium active:scale-[0.98] disabled:opacity-50"
+            >
+              {currentUser.avatar ? "Change picture" : "Add a picture"}
+            </button>
+            {currentUser.avatar && (
+              <button
+                onClick={deleteAvatar}
+                disabled={busy !== null}
+                className="h-10 rounded-full text-sm font-medium text-destructive active:bg-destructive/10 disabled:opacity-50"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+        <input ref={avatarInput} type="file" accept="image/*" className="hidden" onChange={pickAvatar} />
+      </section>
+
       <section>
         <label htmlFor="bio" className="text-sm font-medium">
           Bio

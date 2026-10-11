@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import { useBorrows } from "@/components/borrow-context";
 import { itemName } from "@/components/borrow-sheet";
+import { Avatar } from "@/components/avatar";
 import { useUser } from "@/components/user-context";
 import { updateBorrow, type Borrow, type BorrowStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -89,12 +90,13 @@ function isDone(b: Borrow) {
 }
 
 function Row({ borrow, incoming }: { borrow: Borrow; incoming: boolean }) {
-  const { currentUser } = useUser();
+  const { users, currentUser } = useUser();
   const { refresh } = useBorrows();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { request, item } = borrow;
   const other = incoming ? borrow.from_name : borrow.to_name;
+  const otherUser = users.find((u) => u.id === (incoming ? request.from_user : request.to_user));
 
   async function act(status: "accepted" | "declined" | "returned") {
     if (!currentUser) return;
@@ -122,10 +124,13 @@ function Row({ borrow, incoming }: { borrow: Borrow; incoming: boolean }) {
           className="size-16 shrink-0 rounded-xl bg-[#F5F5F3] object-contain p-1"
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">
-            <span className="capitalize">{other}</span>
-            {incoming ? " · your " : "'s "}
-            {itemName(item)}
+          <p className="flex min-w-0 items-center gap-1.5 font-medium">
+            {otherUser && <Avatar user={otherUser} className="size-5 text-[10px]" />}
+            <span className="truncate">
+              <span className="capitalize">{other}</span>
+              {incoming ? " · your " : "'s "}
+              {itemName(item)}
+            </span>
           </p>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {request.date_needed ? `Needed ${shortDate(request.date_needed)}` : "No date"}

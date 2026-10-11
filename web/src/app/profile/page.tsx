@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Avatar } from "@/components/avatar";
 import { BodyPhotoUpload } from "@/components/body-photo-upload";
 import { ProfileSettings } from "@/components/profile-settings";
 import { useUser } from "@/components/user-context";
@@ -14,16 +15,24 @@ const TABS = [
 ] as const;
 
 export default function ProfilePage() {
-  const { currentUser } = useUser();
-
   return (
-    <div>
-      <h1 className="text-2xl font-semibold capitalize">{currentUser?.name ?? "Profile"}</h1>
-      {currentUser?.bio && <p className="mt-1 text-sm whitespace-pre-line">{currentUser.bio}</p>}
-      {/* The tab comes from ?tab=, which is request data, so it needs Suspense. */}
-      <Suspense>
-        <ProfileTabs />
-      </Suspense>
+    // The tab comes from ?tab=, which is request data, so it needs Suspense.
+    <Suspense fallback={<ProfileHeader withAvatar={false} />}>
+      <ProfileTabs />
+    </Suspense>
+  );
+}
+
+// Name and bio; on the Settings tab, the profile picture sits next to the name.
+function ProfileHeader({ withAvatar }: { withAvatar: boolean }) {
+  const { currentUser } = useUser();
+  return (
+    <div className="flex items-center gap-3">
+      {withAvatar && currentUser && <Avatar user={currentUser} className="size-14 text-2xl" />}
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold capitalize">{currentUser?.name ?? "Profile"}</h1>
+        {currentUser?.bio && <p className="mt-1 text-sm whitespace-pre-line">{currentUser.bio}</p>}
+      </div>
     </div>
   );
 }
@@ -35,6 +44,7 @@ function ProfileTabs() {
 
   return (
     <>
+      <ProfileHeader withAvatar={tab === "settings"} />
       <div className="mt-4 mb-4 flex rounded-full bg-muted p-1" role="tablist">
         {TABS.map(({ id, label }) => (
           <Link

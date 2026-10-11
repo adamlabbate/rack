@@ -10,6 +10,10 @@ engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread"
 
 SEED_USERS = ["adam", "jake", "maya"]
 
+# Silhouette, length and rise only describe clothes you wear on the body. Shoes and accessories
+# have no fit to check, so they always count as fit-confirmed.
+NO_FIT_CATEGORIES = ("shoes", "accessory")
+
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -163,6 +167,10 @@ def init_db():
         for name in SEED_USERS:
             if name not in existing:
                 session.add(User(name=name))
+        # Items tagged before NO_FIT_CATEGORIES existed.
+        session.exec(
+            text("UPDATE items SET fit_confirmed = 1 WHERE category IN ('shoes', 'accessory') AND NOT fit_confirmed")
+        )
         session.commit()
 
 

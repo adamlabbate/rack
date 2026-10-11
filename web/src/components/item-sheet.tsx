@@ -7,6 +7,7 @@ import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import {
   CATEGORIES,
   FIT_FIELDS,
+  NO_FIT_CATEGORIES,
   LENGTHS,
   deleteItem,
   retagItem,
@@ -231,40 +232,47 @@ function SheetBody({
           </div>
         </Section>
 
-        <div className="mt-6 rounded-2xl border p-3">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold">Fit</h3>
-            {item.fit_confirmed ? (
-              <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Check className="size-4" /> Confirmed
-              </span>
-            ) : fitUnknown ? null : (
-              <button
-                onClick={() => save({ fit_confirmed: true })}
-                className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
-              >
-                <Check className="size-4" /> Looks right
-              </button>
+        {NO_FIT_CATEGORIES.includes(item.category ?? "") ? (
+          <p className="mt-6 rounded-2xl border p-3 text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">Fit</span> doesn&apos;t apply to{" "}
+            {item.category === "shoes" ? "shoes" : "accessories"}.
+          </p>
+        ) : (
+          <div className="mt-6 rounded-2xl border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold">Fit</h3>
+              {item.fit_confirmed ? (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Check className="size-4" /> Confirmed
+                </span>
+              ) : fitUnknown ? null : (
+                <button
+                  onClick={() => save({ fit_confirmed: true })}
+                  className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+                >
+                  <Check className="size-4" /> Looks right
+                </button>
+              )}
+            </div>
+            {!item.fit_confirmed && (
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span className="size-2 shrink-0 rounded-full bg-amber-500" />
+                {fitUnknown
+                  ? "Gemini couldn't judge the fit from this photo. Pick it yourself."
+                  : "Gemini's guess. Fix anything that's off."}
+              </p>
             )}
+            <Section title="Silhouette">
+              <Chips options={SILHOUETTES} value={item.silhouette} onChange={(silhouette) => save({ silhouette })} />
+            </Section>
+            <Section title="Length">
+              <Chips options={LENGTHS} value={item.length} onChange={(length) => save({ length })} />
+            </Section>
+            <Section title="Rise">
+              <Chips options={RISES} value={item.rise} onChange={(rise) => save({ rise })} />
+            </Section>
           </div>
-          {!item.fit_confirmed && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <span className="size-2 shrink-0 rounded-full bg-amber-500" />
-              {fitUnknown
-                ? "Gemini couldn't judge the fit from this photo. Pick it yourself."
-                : "Gemini's guess. Fix anything that's off."}
-            </p>
-          )}
-          <Section title="Silhouette">
-            <Chips options={SILHOUETTES} value={item.silhouette} onChange={(silhouette) => save({ silhouette })} />
-          </Section>
-          <Section title="Length">
-            <Chips options={LENGTHS} value={item.length} onChange={(length) => save({ length })} />
-          </Section>
-          <Section title="Rise">
-            <Chips options={RISES} value={item.rise} onChange={(rise) => save({ rise })} />
-          </Section>
-        </div>
+        )}
 
         <Section title="Your tags">
           <ListEditor

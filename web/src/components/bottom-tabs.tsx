@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Shirt, Sparkles, User, Users } from "lucide-react";
+import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -24,13 +25,26 @@ export function BottomTabs() {
 // The bar itself. With pathname null (while BottomTabs waits on the URL inside Suspense) no tab is
 // highlighted, so the bar never disappears.
 export function TabBar({ pathname }: { pathname: string | null }) {
+  const { currentUser } = useUser();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t bg-background pb-[env(safe-area-inset-bottom)]">
       <ul className="mx-auto flex max-w-md">
         {TABS.map(({ href, label, icon: Icon, ready }) => {
+          const active = pathname !== null && isActive(pathname, href);
+          // The Profile tab shows your own picture once you've added one.
+          const picture = href === "/profile" ? currentUser?.avatar : null;
           const content = (
             <>
-              <Icon className="size-6" />
+              {picture ? (
+                // eslint-disable-next-line @next/next/no-img-element -- images come from the API server
+                <img
+                  src={picture}
+                  alt=""
+                  className={cn("size-6 rounded-full object-cover", active && "ring-2 ring-foreground ring-offset-1")}
+                />
+              ) : (
+                <Icon className="size-6" />
+              )}
               <span className="text-xs">{ready ? label : `${label} · soon`}</span>
             </>
           );
@@ -40,7 +54,7 @@ export function TabBar({ pathname }: { pathname: string | null }) {
               {ready ? (
                 <Link
                   href={href}
-                  className={cn(base, pathname && isActive(pathname, href) ? "text-foreground" : "text-muted-foreground")}
+                  className={cn(base, active ? "text-foreground" : "text-muted-foreground")}
                 >
                   {content}
                 </Link>

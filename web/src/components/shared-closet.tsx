@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Loader2, Shirt } from "lucide-react";
 import { getGroups, getSharedCloset, type Category, type GroupWithMembers, type SharedItem } from "@/lib/api";
+import { Avatar } from "@/components/avatar";
 import { useBorrows } from "@/components/borrow-context";
 import { CategoryFilter, FILTERS } from "@/components/category-filter";
 import { useUser } from "@/components/user-context";
@@ -41,17 +42,40 @@ export function SharedCloset({ params }: { params: Promise<{ kind: string; id: s
   const ownerIds = isGroup ? (group?.members.map((m) => m.id) ?? []) : [Number(id)];
   const items = data?.shared.filter((s) => ownerIds.includes(s.item.owner_id));
   const visible = items?.filter((s) => !filter || s.item.category === filter);
-  const friendName = users.find((u) => u.id === Number(id))?.name ?? "Friend";
+  const friend = isGroup ? undefined : users.find((u) => u.id === Number(id));
+  const friendName = friend?.name ?? "Friend";
+  const others = group?.members.filter((m) => m.id !== currentUser?.id) ?? [];
 
   return (
     <div>
       <Link href="/friends" className="-ml-2 mb-1 flex h-10 w-fit items-center gap-1 rounded-full pr-3 pl-1 text-sm text-muted-foreground">
         <ChevronLeft className="size-5" /> Friends
       </Link>
-      <h1 className="text-2xl font-semibold">
-        {isGroup ? (group?.group.name ?? "Group") : <><span className="capitalize">{friendName}</span>&apos;s Rack</>}
-      </h1>
-      <p className="mt-1 mb-4 text-sm text-muted-foreground">
+      <div className="flex items-center gap-3">
+        {friend && <Avatar user={friend} className="size-14 text-2xl" />}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold">
+            {isGroup ? (group?.group.name ?? "Group") : <><span className="capitalize">{friendName}</span>&apos;s Rack</>}
+          </h1>
+          {friend?.bio && <p className="mt-0.5 text-sm whitespace-pre-line">{friend.bio}</p>}
+        </div>
+      </div>
+      {others.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {others.map((m) => (
+            <li key={m.id}>
+              <Link
+                href={`/friends/user/${m.id}`}
+                className="flex h-9 items-center gap-1.5 rounded-full bg-muted pr-3 pl-1 text-sm font-medium capitalize"
+              >
+                <Avatar user={m} className="size-7 text-xs" />
+                {m.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-2 mb-4 text-sm text-muted-foreground">
         {isGroup ? "Everything members share with the group." : "Shared with you."} Tap a piece to borrow it.
       </p>
 
@@ -88,7 +112,11 @@ export function SharedCloset({ params }: { params: Promise<{ kind: string; id: s
                       className={cn("size-full", item.cutout_path ? "object-contain p-4" : "object-cover")}
                     />
                     {isGroup && (
-                      <span className="absolute top-2 left-2 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium capitalize">
+                      <span className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-background/90 py-0.5 pr-2 pl-0.5 text-xs font-medium capitalize">
+                        {(() => {
+                          const owner = users.find((u) => u.id === item.owner_id);
+                          return owner && <Avatar user={owner} className="size-5 text-[10px]" />;
+                        })()}
                         {owner_name}
                       </span>
                     )}

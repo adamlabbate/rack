@@ -3,7 +3,7 @@ import { getLocation } from "@/lib/location";
 export type User = {
   id: number;
   name: string;
-  avatar: string | null;
+  avatar: string | null; // profile picture, a square crop
   full_body_photo: string | null; // what "See it on me" renders outfits on
   bio: string | null;
   location_city: string | null; // typed in Settings; null = use the phone's location (or campus)
@@ -33,6 +33,8 @@ export const SILHOUETTES = [
 export const LENGTHS = ["cropped", "regular", "full", "stacked", "unknown"] as const;
 export const RISES = ["low", "mid", "high", "n_a"] as const;
 export const FIT_FIELDS = ["silhouette", "length", "rise"] as const;
+// Same as api/db.py: no silhouette/length/rise to check, so always fit-confirmed.
+export const NO_FIT_CATEGORIES: string[] = ["shoes", "accessory"];
 
 export type Category = (typeof CATEGORIES)[number];
 
@@ -208,6 +210,16 @@ export function uploadBodyPhoto(userId: number, file: File) {
   const form = new FormData();
   form.append("file", file);
   return request<User>(`/users/${userId}/photo`, { method: "POST", body: form });
+}
+
+export function uploadAvatar(userId: number, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return request<User>(`/users/${userId}/avatar`, { method: "POST", body: form });
+}
+
+export function removeAvatar(userId: number) {
+  return request<User>(`/users/${userId}/avatar`, { method: "DELETE" });
 }
 
 export function removeBodyPhoto(userId: number) {

@@ -18,7 +18,7 @@ import gemini
 import social
 import styling
 import tools
-from db import STATIC_DIR, BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, engine, get_session, init_db
+from db import NO_FIT_CATEGORIES, STATIC_DIR, BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, engine, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
 register_heif_opener()  # lets Pillow read iPhone HEIC photos picked from the library
@@ -121,6 +121,8 @@ def apply_tags(item: Item, tags: gemini.Tags):
             setattr(item, field, getattr(tags, field))
     if item.category not in WEATHER_CATEGORIES and "weather_ok" not in item.edited_fields:
         item.weather_ok = []
+    if item.category in NO_FIT_CATEGORIES:
+        item.fit_confirmed = True  # nothing to confirm
 
 
 @asynccontextmanager
@@ -464,6 +466,8 @@ def update_item(item_id: int, update: ItemUpdate, session: Session = Depends(get
     if FIT_FIELDS & changes.keys() or changes.get("fit_confirmed"):
         item.fit_confirmed = True
         edited |= FIT_FIELDS
+    if item.category in NO_FIT_CATEGORIES:
+        item.fit_confirmed = True  # e.g. re-categorized as shoes
     item.user_edited = True
     item.edited_fields = sorted(edited)  # new list so SQLAlchemy sees the JSON change
 
@@ -676,6 +680,41 @@ def upload_body_photo(user_id: int, file: UploadFile = File(...), session: Sessi
     session.add(user)
     session.commit()
     session.refresh(user)
+    return user
+
+
+AVATAR_SIZE = 512  # square; shown at most ~80px, so this stays sharp on retina screens
+
+
+@app.post("/users/{user_id}/avatar")
+def upload_avatar(user_id: int, file: UploadFile = File(...), session: Session = Depends(get_session)) -> User:
+    """Set (or replace) the profile picture: a center square crop of the photo."""
+    user = get_user_or_404(session, user_id)
+    try:
+        img = ImageOps.exif_transpose(Image.open(file.file)).convert("RGB")
+    except (UnidentifiedImageError, OSError):
+        raise HTTPException(400, "File is not a readable image")
+
+    name = f"avatar_{user_id}_{uuid.uuid4().hex[:8]}.jpg"  # new name each time, so phones never show a cached one
+    ImageOps.fit(img, (AVATAR_SIZE, AVATAR_SIZE)).save(UPLOADS_DIR / name, "JPEG", quality=90)
+    if user.avatar:
+        (STATIC_DIR / user.avatar.removeprefix("/static/")).unlink(missing_ok=True)
+    user.avatar = f"/static/uploads/{name}"
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+@app.delete("/users/{user_id}/avatar")
+def remove_avatar(user_id: int, session: Session = Depends(get_session)) -> User:
+    user = get_user_or_404(session, user_id)
+    if user.avatar:
+        (STATIC_DIR / user.avatar.removeprefix("/static/")).unlink(missing_ok=True)
+        user.avatar = None
+        session.add(user)
+        session.commit()
+        session.refresh(user)
     return user
 
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Loader2, Users } from "lucide-react";
 import { getFriends, getGroups, getSharedCloset, type GroupWithMembers, type SharedItem, type User } from "@/lib/api";
+import { Avatar } from "@/components/avatar";
 import { useUser } from "@/components/user-context";
 
 type Social = { userId: number; friends: User[]; groups: GroupWithMembers[]; shared: SharedItem[] };
@@ -64,7 +65,7 @@ export default function FriendsPage() {
                     <Row
                       key={group.id}
                       href={`/friends/group/${group.id}`}
-                      initial={group.name[0]}
+                      leading={<MemberStack members={others} />}
                       title={group.name}
                       subtitle={`${KIND_LABEL[group.kind] ?? group.kind} · ${members.length} members · ${sharedBy(others.map((m) => m.id))} shared pieces`}
                     />
@@ -78,7 +79,7 @@ export default function FriendsPage() {
                   <Row
                     key={friend.id}
                     href={`/friends/user/${friend.id}`}
-                    initial={friend.name[0]}
+                    leading={<Avatar user={friend} className="size-12 text-lg" />}
                     title={friend.name}
                     subtitle={`${sharedBy([friend.id])} shared pieces`}
                   />
@@ -101,13 +102,28 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ href, initial, title, subtitle }: { href: string; initial: string; title: string; subtitle: string }) {
+// Up to three members' pictures, overlapping, in the space one avatar takes.
+function MemberStack({ members }: { members: User[] }) {
+  return (
+    <span className="relative size-12 shrink-0">
+      {members.slice(0, 3).map((m, i) => (
+        <Avatar
+          key={m.id}
+          user={m}
+          className="absolute size-8 text-sm ring-2 ring-background"
+          // Fan out across the 48px square: top-left, bottom-right, then top-right.
+          style={{ top: [0, 16, 0][i], left: [0, 16, 16][i], zIndex: 3 - i }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function Row({ href, leading, title, subtitle }: { href: string; leading: React.ReactNode; title: string; subtitle: string }) {
   return (
     <li>
       <Link href={href} className="flex items-center gap-3 rounded-2xl border p-3 active:bg-muted">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold uppercase">
-          {initial}
-        </span>
+        {leading}
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium capitalize">{title}</span>
           <span className="block truncate text-sm text-muted-foreground">{subtitle}</span>
