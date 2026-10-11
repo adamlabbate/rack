@@ -47,7 +47,7 @@ export function BodyPhotoUpload({ onUploaded }: { onUploaded?: (user: User) => v
   return (
     <div>
       {photo ? (
-        <div className="relative overflow-hidden rounded-3xl bg-[#F5F5F3]">
+        <div className="relative overflow-hidden rounded-3xl bg-surface">
           {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
           <img src={photo} alt="Your full-body photo" className="aspect-[3/4] w-full object-cover" />
           {uploading && (
@@ -60,7 +60,7 @@ export function BodyPhotoUpload({ onUploaded }: { onUploaded?: (user: User) => v
         <button
           onClick={() => fileInput.current?.click()}
           disabled={uploading || !currentUser}
-          className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed bg-[#F5F5F3] px-8 text-center text-muted-foreground active:scale-[0.98]"
+          className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed bg-surface px-8 text-center text-muted-foreground active:scale-[0.98]"
         >
           {uploading ? <Loader2 className="size-10 animate-spin" /> : <Camera className="size-10" />}
           <span className="font-medium text-foreground">{uploading ? "Uploading…" : "Add a full-body photo"}</span>

@@ -100,7 +100,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
                   <img
                     src={alt.item.cutout_path ?? alt.item.image_path}
                     alt={alt.item.subtype ?? "Clothing item"}
-                    className="size-20 shrink-0 rounded-xl bg-[#F5F5F3] object-contain p-1.5"
+                    className="size-20 shrink-0 rounded-xl garment-surface object-contain p-1.5"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium capitalize">

@@ -119,7 +119,7 @@ export function OutfitCard({ styled, lockedIds, onTapItem, onToggleLock, onSeeOn
 
   return (
     <article className="overflow-hidden rounded-3xl border bg-background">
-      <div className="flex aspect-[4/5] gap-2 bg-[#F5F5F3] p-4">
+      <div className="flex aspect-[4/5] gap-2 garment-surface p-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex min-h-0 flex-[3] gap-3">{[...of("outerwear"), ...of("top")].map(piece)}</div>
           <div className="flex min-h-0 flex-[3.2] justify-center">{of("bottom").map(piece)}</div>
@@ -134,7 +134,7 @@ export function OutfitCard({ styled, lockedIds, onTapItem, onToggleLock, onSeeOn
         <p className="mt-0.5 text-sm text-muted-foreground">{outfit.reason}</p>
         {unavailable.length > 0 ? (
           <>
-            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
               {unavailable.length === 1 ? "A piece isn't" : "Some pieces aren't"} available anymore. Tap a
               piece to swap it, or restyle.
             </p>

@@ -1,13 +1,48 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Loader2, LocateFixed, MapPin } from "lucide-react";
+import { useRef, useState, useSyncExternalStore } from "react";
+import { Loader2, LocateFixed, MapPin, Monitor, Moon, Sun } from "lucide-react";
 import { removeAvatar, updateProfile, uploadAvatar } from "@/lib/api";
 import { requestLocation, type LocationError } from "@/lib/location";
+import { getTheme, setTheme, subscribeTheme, type Theme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/avatar";
 import { useUser } from "@/components/user-context";
 
 const BIO_MAX = 200; // same limit as the API
+
+const THEMES: { id: Theme; label: string; icon: typeof Sun }[] = [
+  { id: "system", label: "System", icon: Monitor },
+  { id: "light", label: "Light", icon: Sun },
+  { id: "dark", label: "Dark", icon: Moon },
+];
+
+// Light / dark lives on this device (localStorage), not the account, so it doesn't need a user.
+function AppearancePicker() {
+  const theme = useSyncExternalStore(subscribeTheme, getTheme, () => "system");
+  return (
+    <section>
+      <h2 className="text-sm font-medium">Appearance</h2>
+      <div className="mt-2 flex rounded-full bg-muted p-1" role="radiogroup" aria-label="Appearance">
+        {THEMES.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            role="radio"
+            aria-checked={theme === id}
+            onClick={() => setTheme(id)}
+            className={cn(
+              "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-medium transition-colors",
+              theme === id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 const LOCATION_HELP: Record<LocationError, string> = {
   insecure: "Location only works on the https:// link. Open that instead, or type a city.",
@@ -190,13 +225,15 @@ export function ProfileSettings() {
         </form>
       </section>
 
+      <AppearancePicker />
+
       {message && (
         <p
           role="status"
           className={
             message.error
               ? "rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              : "rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+              : "rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
           }
         >
           {message.text}

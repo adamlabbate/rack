@@ -46,7 +46,7 @@ export function WeatherWidget() {
     <Link
       href="/profile?tab=settings"
       aria-label="Weather. Tap to change your location"
-      className="mb-4 flex items-center gap-3 rounded-2xl bg-[#F5F5F3] px-4 py-3 active:scale-[0.98]"
+      className="mb-4 flex items-center gap-3 rounded-2xl bg-surface px-4 py-3 active:scale-[0.98]"
     >
       {weather === undefined ? (
         <div className="h-10 flex-1 animate-pulse rounded-lg bg-muted" />

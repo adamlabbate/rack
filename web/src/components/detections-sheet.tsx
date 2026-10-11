@@ -68,7 +68,7 @@ function ReviewBody({ upload, onDone }: { upload: UploadResult; onDone: (outcome
                   onClick={() => toggle(d.index)}
                   aria-pressed={on}
                   className={cn(
-                    "relative block w-full overflow-hidden rounded-xl bg-[#F5F5F3] text-left ring-2 transition",
+                    "relative block w-full overflow-hidden rounded-xl garment-surface text-left ring-2 transition",
                     on ? "ring-primary" : "opacity-60 ring-transparent",
                   )}
                 >

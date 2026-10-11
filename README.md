@@ -54,7 +54,7 @@ Built solo at HackRU for the Gemini track.
 - **Profile and settings**: a profile picture (it becomes the Profile tab icon), a bio, and where
   your weather comes from: your phone's current
   location, or a city you type. The Style tab shows today's forecast for that place in a
-  widget; tap it to change the location.
+  widget; tap it to change the location. Light, dark, or follow the phone.
 - Everything persists in SQLite plus images on disk.
 
 ## Stack

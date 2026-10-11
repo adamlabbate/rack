@@ -196,7 +196,7 @@ export default function StylePage() {
 
       {loading ? (
         <div className="mt-6">
-          <div role="status" className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-3xl bg-[#F5F5F3] text-muted-foreground">
+          <div role="status" className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-3xl bg-surface text-muted-foreground">
             <Sparkles className="size-8 animate-pulse" />
             <p key={thinking} className="animate-in fade-in text-sm font-medium text-foreground duration-500">
               {THINKING[thinking]}

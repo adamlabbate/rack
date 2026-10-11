@@ -25,8 +25,8 @@ const INCOMING_LABEL: Record<BorrowStatus, string> = {
   returned: "Returned",
 };
 const STATUS_STYLE: Record<BorrowStatus, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  accepted: "bg-emerald-100 text-emerald-800",
+  pending: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+  accepted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
   declined: "bg-muted text-muted-foreground",
   returned: "bg-muted text-muted-foreground",
 };
@@ -121,7 +121,7 @@ function Row({ borrow, incoming }: { borrow: Borrow; incoming: boolean }) {
         <img
           src={item.cutout_path ?? item.image_path}
           alt={item.subtype ?? "Clothing item"}
-          className="size-16 shrink-0 rounded-xl bg-[#F5F5F3] object-contain p-1"
+          className="size-16 shrink-0 rounded-xl garment-surface object-contain p-1"
         />
         <div className="min-w-0 flex-1">
           <p className="flex min-w-0 items-center gap-1.5 font-medium">

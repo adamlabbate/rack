@@ -103,7 +103,7 @@ export function SharedCloset({ params }: { params: Promise<{ kind: string; id: s
                 <li key={item.id}>
                   <button
                     onClick={() => askToBorrow(item)}
-                    className="relative block aspect-square w-full overflow-hidden rounded-xl bg-[#F5F5F3] active:scale-[0.98]"
+                    className="relative block aspect-square w-full overflow-hidden rounded-xl garment-surface active:scale-[0.98]"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
                     <img

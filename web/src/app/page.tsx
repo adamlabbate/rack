@@ -167,7 +167,7 @@ export default function ClosetPage() {
             {pendingTiles(uploading).map((tile, i) => (
               <li
                 key={`pending-${i}`}
-                className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-[#F5F5F3] p-3 text-center text-xs text-muted-foreground"
+                className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground"
               >
                 {tile.busy && <Loader2 className="size-6 animate-spin" />}
                 {tile.label}
@@ -180,7 +180,7 @@ export default function ClosetPage() {
                     setSelectedId(item.id);
                     setSheetOpen(true);
                   }}
-                  className="relative block aspect-square w-full overflow-hidden rounded-xl bg-[#F5F5F3] active:scale-[0.98]"
+                  className="relative block aspect-square w-full overflow-hidden rounded-xl garment-surface active:scale-[0.98]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
                   <img

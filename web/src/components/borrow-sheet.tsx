@@ -59,7 +59,7 @@ function SheetBody({ item, onSent }: { item: Item; onSent: () => void }) {
     <>
       <SheetHeader />
       <Drawer.Content className="min-h-0 flex-1 touch-auto overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-[#F5F5F3] p-4">
+        <div className="flex aspect-[4/3] items-center justify-center rounded-2xl garment-surface p-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
           <img
             src={item.cutout_path ?? item.image_path}

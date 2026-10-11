@@ -149,6 +149,11 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   Remove: DELETE /users/{id}/photo, also clears renders) and Settings (components/profile-settings.tsx: profile picture via
   POST/DELETE /users/{id}/avatar, bio, location). components/avatar.tsx is the circle (initial if none); it's
   the Profile tab icon and sits by the name on the Settings tab.
+- Dark mode: Settings > Appearance (System / Light / Dark), per device in localStorage "rack.theme" (lib/theme.ts).
+  THEME_SCRIPT in the layout's <head> sets html.dark before paint and follows the phone live; ThemeSync
+  re-applies it after dev Strict Mode's remount. Colors: use bg-surface for soft panels and the garment-surface
+  class wherever cutouts are drawn (stays light grey in dark mode so black clothes don't vanish); never
+  hardcode #F5F5F3. Editing globals.css sometimes needs a dev server restart to show up.
 - Shoes and accessories have no fit (db.NO_FIT_CATEGORIES): always fit_confirmed, no Fit box in the item sheet. PATCH /users/{id} {bio, city} geocodes the city with tools.locate(); city "" = phone location.
   main.weather_place(user, phone) picks saved city > phone coords > campus for the stylist, alternatives and
   GET /users/{id}/weather (the Style tab's components/weather-widget.tsx). With a saved city the web app never
