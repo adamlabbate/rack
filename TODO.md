@@ -39,8 +39,13 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
       The proxy allows 120s; anything slower fails.
 - [ ] **Only one outerwear piece per outfit.** On a cold rainy day the stylist can't layer the
       warm hooded jacket under the rain shell; it puts a warm top under the shell instead.
-- [ ] **Reasons can invent details.** One outfit called a hoodie "fleece" though no tag says so.
-      The prompt could say to describe items only from their tags.
+- [x] **Reasons can invent details.** One outfit called a hoodie "fleece" though no tag says so.
+      Fixed in `STYLIST_PROMPT`: 1-2 specific sentences (colors, types, notable fit, real weather
+      numbers, who to borrow from), nothing the tags don't say, no "regular", no internal fields.
+      Checked on 12 real outfits.
+- [x] **Parallel stylist calls failed right after a server start** ("client has been closed"):
+      two first requests each created a Gemini client and the loser was garbage-collected
+      mid-call. Fixed with a lock in `gemini._get_client()`.
 - [ ] **Outfits repeat when options are thin.** With one rain-ok pair of shoes and one rain
       jacket, all 3 outfits share them. Expected, but worth a "add rain shoes" hint in the UI.
 

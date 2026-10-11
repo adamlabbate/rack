@@ -35,7 +35,7 @@ Built solo at HackRU for the Gemini track.
   weather, your learned preferences) and returns 2–3 outfits. Every outfit is checked in code
   (exactly one top, bottom and shoes, all from your closet) and retried once if it breaks a rule.
 - **Flat-lay outfit cards**: swipe between outfits drawn from your cutouts, with each piece's fit
-  under it and one line on why the outfit works.
+  under it and a line or two on why the outfit works, using only what the tags and the forecast say.
 - **Swap and lock**: tap a piece to see alternatives from your closet, ranked instantly by
   formality match, color compatibility and weather. Lock pieces you love and hit Regenerate to
   get new outfits built around them.

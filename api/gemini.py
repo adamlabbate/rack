@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import threading
 import time
 from typing import Literal
 
@@ -93,13 +94,17 @@ MOCK_ANALYSIS = PhotoAnalysis(
 )
 
 _client: genai.Client | None = None
+_client_lock = threading.Lock()
 
 
 def _get_client() -> genai.Client:
     # Created lazily so load_dotenv() in main.py has run before GEMINI_API_KEY is read.
+    # The lock stops two first requests from each making a client: the loser would be garbage-collected,
+    # which closes its connection mid-call ("Cannot send a request, as the client has been closed").
     global _client
-    if _client is None:
-        _client = genai.Client()
+    with _client_lock:
+        if _client is None:
+            _client = genai.Client()
     return _client
 
 
@@ -147,7 +152,7 @@ class OutfitPick(BaseModel):
     borrowed_item_ids: list[int] = Field(
         description="The IDs in item_ids that belong to a friend (owner_name is not 'you'); empty if none"
     )
-    reason: str = Field(description="One sentence on why this outfit works for the request")
+    reason: str = Field(description="1-2 sentences on why this outfit works for the request")
 
 
 class Outfits(BaseModel):
@@ -181,10 +186,21 @@ Rules for every outfit:
   ("borrow Jake's navy blazer").
 - Make 2-3 outfits that are meaningfully different (reusing pieces is fine if the closet is small).
 
-In reasons, call the user's closet their "Rack" (the app's name), e.g. "nothing on your Rack is formal enough".
+Writing the reason (1-2 sentences, shown on the outfit card):
+- Be specific: name the key pieces by color and type ("the navy quarter-zip", "grey wide-leg sweatpants"),
+  say how their fits work together (silhouette, length, rise), and tie it to the occasion. If you checked
+  the weather, use the real numbers ("58F and light rain, so the rain-ok boots").
+- Mention fit only where it says something (slim, relaxed, wide-leg, cropped, high rise...). Never write
+  "regular" fit or length; it's the default and reads as filler.
+- Only state what the tags or the weather say. You never see the clothes, so never name a material, fabric,
+  texture, pattern, brand, print or detail (fleece, wool, knit, breathable, lightweight, striped, cozy) that
+  isn't in an item's tags. Derived claims are fine: weather_ok rain -> "handles the rain", warmth 4 ->
+  "warm", formality 4 -> "polished".
+- Don't mention internal fields like fit_confirmed, visibility or item IDs.
+- Call the user's closet their "Rack" (the app's name), e.g. "nothing on your Rack is formal enough".
 
-Answer with each outfit as: a short name (2-4 words), its item IDs, which of those IDs are borrowed, and one
-sentence on why it works."""
+Answer with each outfit as: a short name (2-4 words), its item IDs, which of those IDs are borrowed, and the
+reason."""
 
 REQUIRED_CATEGORIES = ("top", "bottom", "shoes")
 
