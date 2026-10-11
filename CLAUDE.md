@@ -132,6 +132,9 @@ CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stag
 - web/ is Next.js 16: read web/AGENTS.md and node_modules/next/dist/docs/
   before writing Next code.
 - Node/Python come from Homebrew (/opt/homebrew/bin); venv is Python 3.12.
-- Phone testing: http://<laptop LAN IP>:3000 (ipconfig getifaddr en0); the IP
-  changes per network. Use a phone hotspot if venue Wi-Fi isolates clients
-  (CORS allows 10.x, 172.16-31.x and 192.168.x).
+- One origin: the browser only talks to Next. web/next.config.ts rewrites /api/* -> localhost:8000/*
+  and /static/* -> localhost:8000/static/*; frontend uses relative paths, the API has no CORS.
+  experimental.proxyTimeout is 120s (default 30s cuts off the stylist).
+- Phone testing: `cloudflared tunnel --url http://localhost:3000` gives an HTTPS
+  *.trycloudflare.com URL (works on any network, and HTTPS lets the phone share its location).
+  Plain http://<laptop LAN IP>:3000 also works but gets campus weather (no geolocation on HTTP).

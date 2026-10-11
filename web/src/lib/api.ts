@@ -1,15 +1,5 @@
 import { getLocation } from "@/lib/location";
 
-// The API runs on port 8000 of the same machine that serves the web app,
-// so this works both on localhost and from a phone on the LAN.
-export function apiBase() {
-  return `http://${window.location.hostname}:8000`;
-}
-
-export function imageUrl(path: string) {
-  return `${apiBase()}${path}`;
-}
-
 export type User = {
   id: number;
   name: string;
@@ -85,7 +75,8 @@ export type ItemUpdate = Partial<
 >;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, init);
+  // Same origin: next.config.ts proxies /api/* to the FastAPI server (and /static/* for images).
+  const res = await fetch(`/api${path}`, init);
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(body?.detail ?? `Request failed (${res.status})`);

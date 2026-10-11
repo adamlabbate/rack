@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Drawer } from "@base-ui/react/drawer";
 import { Loader2 } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
-import { getAlternatives, imageUrl, type Alternative, type Item } from "@/lib/api";
+import { getAlternatives, type Alternative, type Item } from "@/lib/api";
 import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +96,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
                   <img
-                    src={imageUrl(alt.item.cutout_path ?? alt.item.image_path)}
+                    src={alt.item.cutout_path ?? alt.item.image_path}
                     alt={alt.item.subtype ?? "Clothing item"}
                     className="size-20 shrink-0 rounded-xl bg-[#F5F5F3] object-contain p-1.5"
                   />

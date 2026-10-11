@@ -93,9 +93,18 @@ instead of calling Gemini.
 
 **3. On your phone**
 
-Put your phone on the same Wi-Fi as your laptop, find the laptop's IP with
-`ipconfig getifaddr en0` (macOS), and open `http://<that IP>:3000`. If the network blocks devices
-from talking to each other (common at venues), connect the laptop to your phone's hotspot instead.
+The web app proxies the API and images (`/api/*`, `/static/*`) through its own origin, so one
+URL is all your phone needs. The easiest way is a free Cloudflare tunnel, which works on any
+network and gives you HTTPS, so the phone can share its location for local weather:
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:3000
+```
+
+Open the `https://….trycloudflare.com` URL it prints. Or, on the same Wi-Fi, open
+`http://<laptop IP>:3000` (`ipconfig getifaddr en0` on macOS). Over plain HTTP the browser won't
+share location, so the stylist uses New Brunswick, NJ weather.
 
 ### Mock mode
 

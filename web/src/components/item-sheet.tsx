@@ -7,7 +7,6 @@ import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import {
   CATEGORIES,
   FIT_FIELDS,
-  imageUrl,
   LENGTHS,
   deleteItem,
   retagItem,
@@ -120,7 +119,7 @@ function SheetBody({
         <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-[#F5F5F3] p-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
           <img
-            src={imageUrl(item.cutout_path ?? item.image_path)}
+            src={item.cutout_path ?? item.image_path}
             alt={item.subtype ?? "Clothing item"}
             className={cn("max-h-full max-w-full", item.cutout_path ? "object-contain" : "rounded-lg object-cover")}
           />

@@ -6,7 +6,6 @@ import {
   confirmUpload,
   discardUpload,
   getItems,
-  imageUrl,
   uploadPhoto,
   type Category,
   type Item,
@@ -179,7 +178,7 @@ export default function ClosetPage() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
                   <img
-                    src={imageUrl(item.cutout_path ?? item.image_path)}
+                    src={item.cutout_path ?? item.image_path}
                     alt={item.subtype ?? item.category ?? "Clothing item"}
                     className={cn("size-full", item.cutout_path ? "object-contain p-4" : "object-cover")}
                   />

@@ -6,7 +6,7 @@ import { Check, Clock, Loader2 } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import { useBorrows } from "@/components/borrow-context";
 import { useUser } from "@/components/user-context";
-import { imageUrl, requestBorrow, type Item } from "@/lib/api";
+import { requestBorrow, type Item } from "@/lib/api";
 
 // Local YYYY-MM-DD, `days` from today (toISOString would use UTC and can be off by a day).
 function localDate(days: number) {
@@ -62,7 +62,7 @@ function SheetBody({ item, onSent }: { item: Item; onSent: () => void }) {
         <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-[#F5F5F3] p-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
           <img
-            src={imageUrl(item.cutout_path ?? item.image_path)}
+            src={item.cutout_path ?? item.image_path}
             alt={item.subtype ?? "Clothing item"}
             className="max-h-full max-w-full object-contain"
           />

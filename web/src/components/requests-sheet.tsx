@@ -7,7 +7,7 @@ import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
 import { useBorrows } from "@/components/borrow-context";
 import { itemName } from "@/components/borrow-sheet";
 import { useUser } from "@/components/user-context";
-import { imageUrl, updateBorrow, type Borrow, type BorrowStatus } from "@/lib/api";
+import { updateBorrow, type Borrow, type BorrowStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // How each status reads from the borrower's side and from the owner's side.
@@ -117,7 +117,7 @@ function Row({ borrow, incoming }: { borrow: Borrow; incoming: boolean }) {
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
         <img
-          src={imageUrl(item.cutout_path ?? item.image_path)}
+          src={item.cutout_path ?? item.image_path}
           alt={item.subtype ?? "Clothing item"}
           className="size-16 shrink-0 rounded-xl bg-[#F5F5F3] object-contain p-1"
         />

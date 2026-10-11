@@ -7,7 +7,6 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pillow_heif import register_heif_opener
@@ -127,17 +126,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Rack API", lifespan=lifespan)
 
-# The web app runs on :3000, opened either on this machine or from a phone on the LAN.
-# All three private IP ranges are allowed; iPhone hotspots use 172.20.10.x.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=(
-        r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+"
-        r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+):3000"
-    ),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# No CORS: the browser only talks to the Next.js app, which proxies /api/* and /static/* here
+# (web/next.config.ts), so the API is same-origin from the browser's point of view.
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

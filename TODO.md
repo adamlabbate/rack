@@ -30,10 +30,10 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
       budget or skipping the second call.
 - [x] **`get_weather` is hardcoded** (58°F, light rain) in `api/tools.py`. Now a live Open-Meteo
       forecast at the phone's location.
-- [ ] **No location on the phone over plain HTTP.** Browsers only share location on HTTPS or
-      localhost, so on `http://<LAN IP>:3000` the weather falls back to New Brunswick, NJ. Fix:
-      serve web and API over HTTPS (e.g. `next dev --experimental-https` plus uvicorn with the
-      same cert) or a tunnel.
+- [x] **No location on the phone over plain HTTP.** Fixed by serving everything from one origin
+      and opening it through a cloudflared tunnel (HTTPS). Plain LAN HTTP still gets campus weather.
+- [ ] **One stylist call took 70s** through the tunnel (usually 15-40s), probably a Gemini retry.
+      The proxy allows 120s; anything slower fails.
 - [ ] **Only one outerwear piece per outfit.** On a cold rainy day the stylist can't layer the
       warm hooded jacket under the rain shell; it puts a warm top under the shell instead.
 - [ ] **Reasons can invent details.** One outfit called a hoodie "fleece" though no tag says so.

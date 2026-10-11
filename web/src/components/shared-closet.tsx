@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Loader2, Shirt } from "lucide-react";
-import { getGroups, getSharedCloset, imageUrl, type Category, type GroupWithMembers, type SharedItem } from "@/lib/api";
+import { getGroups, getSharedCloset, type Category, type GroupWithMembers, type SharedItem } from "@/lib/api";
 import { useBorrows } from "@/components/borrow-context";
 import { CategoryFilter, FILTERS } from "@/components/category-filter";
 import { useUser } from "@/components/user-context";
@@ -83,7 +83,7 @@ export function SharedCloset({ params }: { params: Promise<{ kind: string; id: s
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
                     <img
-                      src={imageUrl(item.cutout_path ?? item.image_path)}
+                      src={item.cutout_path ?? item.image_path}
                       alt={item.subtype ?? item.category ?? "Clothing item"}
                       className={cn("size-full", item.cutout_path ? "object-contain p-4" : "object-cover")}
                     />

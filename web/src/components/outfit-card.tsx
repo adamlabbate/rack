@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, LockOpen } from "lucide-react";
-import { imageUrl, type BorrowStatus, type Item, type StyledOutfit } from "@/lib/api";
+import type { BorrowStatus, Item, StyledOutfit } from "@/lib/api";
 import { useBorrows } from "@/components/borrow-context";
 import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ function Piece({ item, locked, borrow, onTap, onToggleLock }: PieceProps) {
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
         <img
-          src={imageUrl(item.cutout_path ?? item.image_path)}
+          src={item.cutout_path ?? item.image_path}
           alt={item.subtype ?? item.category ?? "Clothing item"}
           className="min-h-0 w-full flex-1 object-contain drop-shadow-sm"
         />

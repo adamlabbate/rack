@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Drawer } from "@base-ui/react/drawer";
 import { Check, Layers } from "lucide-react";
 import { BottomSheet, SheetHeader } from "@/components/bottom-sheet";
-import { imageUrl, type UploadResult } from "@/lib/api";
+import type { UploadResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export type ReviewOutcome = { add: number[] } | "retake" | "skip";
@@ -74,7 +74,7 @@ function ReviewBody({ upload, onDone }: { upload: UploadResult; onDone: (outcome
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- images come from the API server */}
                   <img
-                    src={imageUrl(d.preview_path)}
+                    src={d.preview_path}
                     alt={d.tags?.subtype ?? "Detected item"}
                     className="aspect-square w-full object-contain"
                   />
