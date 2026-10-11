@@ -16,9 +16,9 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 - [ ] **The career fair demo borrows everything.** Adam owns one casual tee, so all three real
       outfits were made only of Jake's or Maya's pieces. Adam needs more of his own clothes for
       "prefer own, borrow to fill gaps" to show.
-- [ ] **Deleting an item with a borrow request breaks the bell.** `DELETE /items/{id}` leaves its
-      borrow requests, and `borrow_out()` assumes the item exists, so `GET /borrow` would 500 for
-      both people. Fix: delete (or skip) requests whose item is gone.
+- [x] **Deleting an item with a borrow request breaks the bell.** Fixed: `DELETE /items/{id}` deletes
+      the item's borrow requests, `GET /borrow` joins on items so an orphaned request is skipped,
+      `PATCH /borrow/{id}` 404s on one, and `discard_orphan_borrows()` clears any left on startup.
 - [ ] **No auth on borrow actions.** `PATCH /borrow/{id}` trusts the `user_id` in the body.
 
 ## Stage 2 (AI styling) follow-ups

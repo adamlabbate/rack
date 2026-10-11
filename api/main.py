@@ -129,6 +129,7 @@ def apply_tags(item: Item, tags: gemini.Tags):
 async def lifespan(app: FastAPI):
     init_db()
     discard_stale_uploads()
+    discard_orphan_borrows()
     load_rembg_sessions()
     yield
 
@@ -253,6 +254,19 @@ def discard_stale_uploads():
             remove_unused_files(session, upload_files(upload))
     if stale:
         print(f"Discarded {len(stale)} abandoned uploads")
+
+
+def discard_orphan_borrows():
+    """Drop borrow requests whose item is gone (deleted before DELETE /items cleaned them up)."""
+    with Session(engine) as session:
+        orphans = session.exec(
+            select(BorrowRequest).where(BorrowRequest.item_id.not_in(select(Item.id)))
+        ).all()
+        for req in orphans:
+            session.delete(req)
+        session.commit()
+    if orphans:
+        print(f"Discarded {len(orphans)} borrow requests for deleted items")
 
 
 def upload_files(upload: Upload) -> list[str]:
@@ -479,9 +493,11 @@ def update_item(item_id: int, update: ItemUpdate, session: Session = Depends(get
 
 @app.delete("/items/{item_id}")
 def delete_item(item_id: int, session: Session = Depends(get_session)) -> dict:
-    """Remove an item and any of its image files that nothing else uses."""
+    """Remove an item, its borrow requests, and any of its image files that nothing else uses."""
     item = get_item_or_404(session, item_id)
     files = [item.image_path, item.cutout_path, item.onbody_path]
+    for req in session.exec(select(BorrowRequest).where(BorrowRequest.item_id == item_id)).all():
+        session.delete(req)
     session.delete(item)
     session.commit()
     remove_unused_files(session, files)
@@ -872,8 +888,12 @@ def list_borrows(user_id: int, session: Session = Depends(get_session)) -> Borro
     get_user_or_404(session, user_id)
 
     def requests(column) -> list[BorrowOut]:
+        # The join skips any request whose item is gone, so an orphaned row can't break the bell.
         rows = session.exec(
-            select(BorrowRequest).where(column == user_id).order_by(BorrowRequest.created_at.desc())
+            select(BorrowRequest)
+            .join(Item, Item.id == BorrowRequest.item_id)
+            .where(column == user_id)
+            .order_by(BorrowRequest.created_at.desc())
         ).all()
         return [borrow_out(session, r) for r in rows]
 
@@ -897,7 +917,7 @@ BORROW_TRANSITIONS = {
 def update_borrow(borrow_id: int, body: BorrowUpdate, session: Session = Depends(get_session)) -> BorrowOut:
     """Owner accepts or declines a pending request; either side marks an accepted loan returned."""
     req = session.get(BorrowRequest, borrow_id)
-    if not req:
+    if not req or not session.get(Item, req.item_id):
         raise HTTPException(404, "Borrow request not found")
     allowed_from, who = BORROW_TRANSITIONS[body.status]
     if body.user_id != req.to_user and (who == "owner" or body.user_id != req.from_user):
