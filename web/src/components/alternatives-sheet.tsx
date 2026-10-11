@@ -67,7 +67,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
     <>
       <SheetHeader />
       <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <Drawer.Title className="font-display text-2xl font-semibold">Swap {item.subtype ?? item.category}</Drawer.Title>
+        <Drawer.Title className="text-2xl font-semibold tracking-tight">Swap {item.subtype ?? item.category}</Drawer.Title>
         <p className="mt-1 text-sm text-muted-foreground">
           Other {category} from your Rack and your friends&apos;, best match for this outfit first.
         </p>

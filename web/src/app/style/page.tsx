@@ -343,7 +343,7 @@ function OutfitSkeleton({ message, step }: { message: string; step: number }) {
         <p className="flex items-center gap-1.5 text-[10px] font-medium tracking-[0.2em] text-muted-foreground uppercase">
           <Sparkles className="size-3 animate-pulse" /> Styling · 15–40 sec
         </p>
-        <p key={step} className="mt-1 animate-in font-display text-2xl leading-tight font-semibold duration-500 fade-in slide-in-from-bottom-1">
+        <p key={step} className="mt-1 animate-in text-2xl leading-tight font-semibold tracking-tight duration-500 fade-in slide-in-from-bottom-1">
           {message}
         </p>
       </div>

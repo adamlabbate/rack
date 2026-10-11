@@ -161,8 +161,8 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   re-applies it after dev Strict Mode's remount. Colors: use bg-surface for soft panels and the garment-surface
   class wherever cutouts are drawn (stays light grey in dark mode so black clothes don't vanish); never
   hardcode #F5F5F3. Editing globals.css sometimes needs a dev server restart to show up.
-- Look: Bodoni Moda (next/font, --font-bodoni -> font-display) for the RACK wordmark, h1s (base style), outfit
-  names and sheet titles; Geist for everything else. One accent, cobalt (bg-brand / text-brand, bg-brand-soft for
+- Look: Geist only (Bodoni was tried and rejected); the RACK wordmark is extrabold Geist, letter-spaced, and titles
+  are semibold with tracking-tight. One accent, cobalt (bg-brand / text-brand, bg-brand-soft for
   in-between states): ONLY the active tab, primary buttons and borrow badges. Selected chips, switches and the
   category filter stay neutral (bg-primary). .shimmer is the loading placeholder for Gemini waits. New @theme
   tokens need a dev server restart.

@@ -15,7 +15,7 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-10 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="flex h-14 items-center justify-between gap-3 px-4">
-        <span className="font-display text-2xl leading-none font-bold tracking-[0.18em]">RACK</span>
+        <span className="text-xl leading-none font-extrabold tracking-[0.2em]">RACK</span>
         <div className="flex items-center gap-1">
           <div className="flex rounded-full bg-muted p-1" role="group" aria-label="Switch user">
             {users.map((user) => (

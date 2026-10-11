@@ -73,7 +73,7 @@ function SheetBody({ styled, onRendered }: { styled: StyledOutfit; onRendered: P
     <>
       <SheetHeader />
       <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <Drawer.Title className="font-display text-2xl leading-tight font-semibold">{styled.outfit.name}</Drawer.Title>
+        <Drawer.Title className="text-2xl leading-tight font-semibold tracking-tight">{styled.outfit.name}</Drawer.Title>
 
         {!hasPhoto ? (
           <>
@@ -93,7 +93,7 @@ function SheetBody({ styled, onRendered }: { styled: StyledOutfit; onRendered: P
                 className="shimmer flex aspect-[3/4] flex-col items-center justify-center gap-3 rounded-3xl px-6 text-center text-muted-foreground"
               >
                 <Sparkles className="size-7 animate-pulse" />
-                <p key={step} className="animate-in font-display text-xl font-semibold text-foreground duration-500 fade-in slide-in-from-bottom-1">
+                <p key={step} className="animate-in text-xl font-semibold tracking-tight text-foreground duration-500 fade-in slide-in-from-bottom-1">
                   {steps[step]}
                 </p>
                 <p className="text-xs">This usually takes 10–20 seconds</p>

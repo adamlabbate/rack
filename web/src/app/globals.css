@@ -13,7 +13,6 @@
   --color-brand-soft: var(--brand-soft);
   --color-brand-soft-foreground: var(--brand-soft-foreground);
   --font-sans: var(--font-sans);
-  --font-display: var(--font-bodoni);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -186,8 +185,7 @@
   html {
     @apply font-sans;
   }
-  /* Page titles in the editorial display face; body text stays Geist. */
   h1 {
-    @apply font-display tracking-tight;
+    @apply tracking-tight;
   }
 }

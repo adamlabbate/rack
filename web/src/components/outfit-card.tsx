@@ -145,8 +145,8 @@ export function OutfitCard({ styled, look, lockedIds, onTapItem, onToggleLock, o
           {look ? `Look ${String(look).padStart(2, "0")} · ` : ""}
           {items.length} pieces
         </p>
-        <h2 className="mt-1 font-display text-2xl leading-tight font-semibold">{outfit.name}</h2>
-        <p className="mt-2 font-display text-[15px] leading-snug text-muted-foreground italic">{outfit.reason}</p>
+        <h2 className="mt-1 text-2xl leading-tight font-semibold tracking-tight">{outfit.name}</h2>
+        <p className="mt-1.5 text-sm leading-snug text-muted-foreground">{outfit.reason}</p>
         {unavailable.length > 0 ? (
           <>
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
