@@ -1,13 +1,21 @@
 # Rack
 
-**Your closet, styled by Gemini, shared with friends.**
+**Your friends' closets, styled by Gemini. Borrow the fit instead of buying it.**
+
+**Why:** at every Rutgers career fair, formal and club shoot, students scramble for clothes
+they'll wear once, while what they need is hanging in a friend's closet. Borrowing happens
+through messy group chats. Rack puts your friends' closets in one place and lets a Gemini
+stylist build outfits from them.
+
+[Devpost](https://devpost.com/software/rack-ra7bxm) · [Demo video](https://youtu.be/bI2uv68OK4M)
+
+Built solo at HackRU Fall 2026 (Gemini track), with Claude Code as a coding assistant. All AI
+features run on Gemini.
 
 Rack is a phone-first digital wardrobe. Snap a photo of your clothes and Rack cuts each piece
 out, tags it with Gemini, and keeps it in your closet for good. Rack records **how each piece
 fits** (silhouette, length, rise), not just what it is, so the stylist can build outfits that
 actually work together.
-
-Built solo at HackRU for the Gemini track.
 
 ## What works today
 
@@ -173,9 +181,9 @@ with the outfit's cutouts under it, which is handy for working on the UI without
 
 1. ~~Wardrobe~~: upload, cutouts, Gemini tags and fit, editing (done)
 2. ~~AI stylist~~: outfits from your closet, flat-lay cards, swap, lock, regenerate (done)
-3. Friends: shared closets, groups and borrow requests (built, polishing)
-4. Profiles: pinned pieces, fit pics, fit history
-5. ~~See it on me~~: an outfit rendered on your own photo with Nano Banana (built)
+3. ~~See it on me~~: an outfit rendered on your own photo with Nano Banana (done)
+4. ~~Friends~~: shared closets, groups and borrow requests (done)
+5. Profiles: pinned pieces, fit pics, fit history (next)
 
 Known issues are tracked in [TODO.md](TODO.md).
 
