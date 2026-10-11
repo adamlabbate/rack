@@ -5,7 +5,14 @@ export type User = {
   name: string;
   avatar: string | null;
   full_body_photo: string | null; // what "See it on me" renders outfits on
+  bio: string | null;
+  location_city: string | null; // typed in Settings; null = use the phone's location (or campus)
+  latitude: number | null;
+  longitude: number | null;
 };
+
+// Ask the phone for its location only when the user hasn't saved a city.
+const phoneLocation = (useDevice: boolean) => (useDevice ? getLocation() : Promise.resolve(null));
 
 // Same vocabularies as api/gemini.py; the API rejects anything else.
 export const CATEGORIES = ["top", "bottom", "shoes", "outerwear", "accessory"] as const;
@@ -167,8 +174,8 @@ export type StyledOutfit = { outfit: Outfit; items: Item[]; unavailable_item_ids
 export type Alternative = { item: Item; score: number; notes: string[] };
 
 // Takes ~15-40s with the real stylist. Sends the phone's location (if allowed) for local weather.
-export async function styleOutfits(userId: number, text: string, lockedItemIds: number[]) {
-  const location = await getLocation();
+export async function styleOutfits(userId: number, text: string, lockedItemIds: number[], useDevice = true) {
+  const location = await phoneLocation(useDevice);
   return request<StyledOutfit[]>("/stylist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -181,8 +188,8 @@ export function getOutfits(ids: number[]) {
   return request<StyledOutfit[]>(`/outfits?${ids.map((id) => `ids=${id}`).join("&")}`);
 }
 
-export async function getAlternatives(itemId: number, outfitId: number) {
-  const location = await getLocation();
+export async function getAlternatives(itemId: number, outfitId: number, useDevice = true) {
+  const location = await phoneLocation(useDevice);
   const where = location ? `&lat=${location.latitude}&lon=${location.longitude}` : "";
   return request<Alternative[]>(`/items/${itemId}/alternatives?outfit_id=${outfitId}${where}`);
 }
@@ -203,9 +210,44 @@ export function uploadBodyPhoto(userId: number, file: File) {
   return request<User>(`/users/${userId}/photo`, { method: "POST", body: form });
 }
 
+export function removeBodyPhoto(userId: number) {
+  return request<User>(`/users/${userId}/photo`, { method: "DELETE" });
+}
+
 // ~10-20s with Nano Banana; instant when a render is already saved (unless force).
 export function renderOutfit(outfitId: number, force = false) {
   return request<StyledOutfit>(`/outfits/${outfitId}/render${force ? "?force=true" : ""}`, { method: "POST" });
+}
+
+// ---------- Profile settings and weather ----------
+
+// city: a place name to geocode, or "" to go back to the phone's location.
+export function updateProfile(userId: number, changes: { bio?: string; city?: string }) {
+  return request<User>(`/users/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(changes),
+  });
+}
+
+export type Weather = {
+  city: string;
+  source: "city" | "device" | "default"; // saved city, the phone's location, or campus
+  temp_f?: number;
+  high_f?: number;
+  low_f?: number;
+  conditions?: string;
+  rain_chance?: number;
+  precipitation?: boolean;
+  snow?: boolean;
+  error?: string; // forecast unreachable
+};
+
+// The same place the stylist gets its weather from.
+export async function getWeather(userId: number, useDevice: boolean) {
+  const location = await phoneLocation(useDevice);
+  const where = location ? `?lat=${location.latitude}&lon=${location.longitude}` : "";
+  return request<Weather>(`/users/${userId}/weather${where}`);
 }
 
 // ---------- Social (stage 4) ----------

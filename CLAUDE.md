@@ -44,7 +44,8 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   gemini-nano-banana-2.1 (on-body renders, stage 3)
 
 ## Data (grow tables as stages need them)
-- users: id, name, avatar, full_body_photo
+- users: id, name, avatar, full_body_photo, bio, location_city + latitude/longitude (typed city for the
+  weather; null = phone location), preferences
 - items: id, owner_id, image_path (the item's own crop), cutout_path,
   onbody_path (original worn photo, shared by items cut from it), category,
   subtype, colors, style, formality (1-5), season, warmth (1-5), weather_ok,
@@ -144,6 +145,12 @@ CURRENT STAGE: 3 ("See it on me"), built after stage 4. Stages 1, 2 and 4 are bu
   gemini.render_outfit (IMAGE_MODEL, prompt from render_prompt/describe_garment). Saved as
   static/renders/<outfit_id>.png in outfits.render_path; a swap or a new body photo clears it.
   Mock mode returns the photo with the cutouts pasted under it. One real render: ~12s, ~$0.04.
+- Profile tab has two tabs (?tab=settings, read with useSearchParams inside Suspense): Fit photo (Replace /
+  Remove: DELETE /users/{id}/photo, also clears renders) and Settings (components/profile-settings.tsx: bio,
+  location). PATCH /users/{id} {bio, city} geocodes the city with tools.locate(); city "" = phone location.
+  main.weather_place(user, phone) picks saved city > phone coords > campus for the stylist, alternatives and
+  GET /users/{id}/weather (the Style tab's components/weather-widget.tsx). With a saved city the web app never
+  asks the phone for its location.
 - Phone testing: `cloudflared tunnel --url http://localhost:3000` gives an HTTPS
   *.trycloudflare.com URL (works on any network, and HTTPS lets the phone share its location).
   Plain http://<laptop LAN IP>:3000 also works but gets campus weather (no geolocation on HTTP).

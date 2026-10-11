@@ -9,6 +9,21 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // Let a phone on the same Wi-Fi (or hotspot), or a cloudflared tunnel, use the dev server.
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*", "*.trycloudflare.com"],
+  // The tunnel also answers on plain http://, where browsers refuse to share location. Send those
+  // visitors to https:// (Cloudflare tells us the visitor's scheme in x-forwarded-proto).
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          { type: "host", value: "(?<host>.*\\.trycloudflare\\.com)" },
+          { type: "header", key: "x-forwarded-proto", value: "http" },
+        ],
+        destination: "https://:host/:path*",
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${API}/:path*` },

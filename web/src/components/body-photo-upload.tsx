@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
-import { uploadBodyPhoto, type User } from "@/lib/api";
+import { removeBodyPhoto, uploadBodyPhoto, type User } from "@/lib/api";
 import { useUser } from "@/components/user-context";
 
-// The current user's full-body photo with a Replace button, or a prompt to add one.
+// The current user's full-body photo with Replace and Remove, or a prompt to add one.
 // Used on the Profile tab and in the "See it on me" sheet when there's no photo yet.
 export function BodyPhotoUpload({ onUploaded }: { onUploaded?: (user: User) => void }) {
   const { currentUser, updateUser } = useUser();
@@ -13,6 +13,19 @@ export function BodyPhotoUpload({ onUploaded }: { onUploaded?: (user: User) => v
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const photo = currentUser?.full_body_photo;
+
+  async function remove() {
+    if (!currentUser || !window.confirm("Remove your photo? Your saved \"See it on me\" previews go too.")) return;
+    setUploading(true);
+    setError(null);
+    try {
+      updateUser(await removeBodyPhoto(currentUser.id));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -59,13 +72,22 @@ export function BodyPhotoUpload({ onUploaded }: { onUploaded?: (user: User) => v
         <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
       {photo && (
-        <button
-          onClick={() => fileInput.current?.click()}
-          disabled={uploading}
-          className="mt-3 h-12 w-full rounded-full bg-muted font-medium active:scale-[0.98] disabled:opacity-50"
-        >
-          Replace
-        </button>
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={() => fileInput.current?.click()}
+            disabled={uploading}
+            className="h-12 flex-1 rounded-full bg-muted font-medium active:scale-[0.98] disabled:opacity-50"
+          >
+            Replace
+          </button>
+          <button
+            onClick={remove}
+            disabled={uploading}
+            className="h-12 flex-1 rounded-full font-medium text-destructive active:scale-[0.98] active:bg-destructive/10 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
       )}
       {/* No `capture` attribute: the phone offers Take Photo, Photo Library, or Files. */}
       <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleFile} />

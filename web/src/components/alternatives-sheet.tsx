@@ -42,11 +42,13 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
   const ownerOf = (alt: Alternative) =>
     alt.item.owner_id === currentUser?.id ? null : users.find((u) => u.id === alt.item.owner_id)?.name;
 
+  const useDevice = !currentUser?.location_city;
+
   useEffect(() => {
-    getAlternatives(item.id, outfitId)
+    getAlternatives(item.id, outfitId, useDevice)
       .then(setAlternatives)
       .catch((err) => setError(err.message));
-  }, [item.id, outfitId]);
+  }, [item.id, outfitId, useDevice]);
 
   async function pick(alt: Alternative) {
     setSwapping(alt.item.id);

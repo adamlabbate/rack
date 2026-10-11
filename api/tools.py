@@ -117,7 +117,7 @@ CACHE_SECONDS = 15 * 60
 _cache: dict[tuple, tuple[float, dict]] = {}
 
 
-def _locate(city: str) -> dict | None:
+def locate(city: str) -> dict | None:
     """City name -> name, latitude, longitude. "Austin, TX" searches "Austin", the biggest match wins."""
     response = httpx.get(GEOCODE_URL, params={"name": city.split(",")[0].strip(), "count": 1}, timeout=5)
     response.raise_for_status()
@@ -161,10 +161,11 @@ def get_weather(
         rain_chance (percent), precipitation (true if rain or snow is likely) and snow. If the
         forecast can't be reached, only city and error.
     """
-    # `here` is the phone's {latitude, longitude}, bound by stylist_tools; Gemini never sees it.
+    # `here` is where the user is ({latitude, longitude}, plus city if they saved one), bound by
+    # stylist_tools; Gemini never sees it.
     try:
         if city:
-            place = _locate(city)
+            place = locate(city)
         elif here:
             place = {"city": "the user's current location", **here}
         else:

@@ -6,6 +6,7 @@ import { getOutfits, styleOutfits, swapItem, type Item, type StyledOutfit } from
 import { AlternativesSheet } from "@/components/alternatives-sheet";
 import { OutfitCard } from "@/components/outfit-card";
 import { RenderSheet } from "@/components/render-sheet";
+import { WeatherWidget } from "@/components/weather-widget";
 import { useUser } from "@/components/user-context";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +80,7 @@ export default function StylePage() {
     setThinking(0);
     setError(null);
     try {
-      const outfits = await styleOutfits(currentUser.id, request.trim(), locked);
+      const outfits = await styleOutfits(currentUser.id, request.trim(), locked, !currentUser.location_city);
       setResults({ userId: currentUser.id, request: request.trim(), outfits });
       setActive(0);
       carousel.current?.scrollTo({ left: 0 });
@@ -149,6 +150,7 @@ export default function StylePage() {
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
         Say where you&apos;re going. Gemini builds outfits from your Rack.
       </p>
+      <WeatherWidget />
 
       <form
         onSubmit={(e) => {

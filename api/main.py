@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +17,7 @@ from sqlmodel import Session, or_, select
 import gemini
 import social
 import styling
+import tools
 from db import STATIC_DIR, BorrowRequest, Group, GroupMember, Item, Outfit, Upload, User, engine, get_session, init_db
 
 load_dotenv(Path(__file__).parent / ".env")
@@ -145,6 +147,59 @@ def health():
 @app.get("/users")
 def list_users(session: Session = Depends(get_session)) -> list[User]:
     return session.exec(select(User).order_by(User.id)).all()
+
+
+class UserUpdate(BaseModel):
+    bio: str | None = Field(None, max_length=200)
+    city: str | None = None  # "" goes back to the phone's location
+
+
+@app.patch("/users/{user_id}")
+def update_user(user_id: int, body: UserUpdate, session: Session = Depends(get_session)) -> User:
+    """Profile settings: the bio, and where the weather comes from."""
+    user = get_user_or_404(session, user_id)
+    changes = body.model_dump(exclude_unset=True)
+    if "bio" in changes:
+        user.bio = (body.bio or "").strip() or None
+    if "city" in changes:
+        if (body.city or "").strip():
+            try:
+                place = tools.locate(body.city.strip())
+            except httpx.HTTPError:
+                raise HTTPException(502, "Couldn't look up cities right now, try again in a moment")
+            if not place:
+                raise HTTPException(422, f"Couldn't find {body.city.strip()}")
+            user.location_city, user.latitude, user.longitude = place["city"], place["latitude"], place["longitude"]
+        else:
+            user.location_city = user.latitude = user.longitude = None
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+def weather_place(user: User, phone: dict | None) -> dict | None:
+    """Where the user's weather comes from: their saved city, else the phone's location (None = campus)."""
+    if user.location_city and user.latitude is not None:
+        return {"city": user.location_city, "latitude": user.latitude, "longitude": user.longitude}
+    return phone
+
+
+@app.get("/users/{user_id}/weather")
+def user_weather(
+    user_id: int,
+    lat: float | None = Query(None, ge=-90, le=90),
+    lon: float | None = Query(None, ge=-180, le=180),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Today's weather for the Style tab widget, from the same place the stylist uses."""
+    user = get_user_or_404(session, user_id)
+    phone = {"latitude": lat, "longitude": lon} if lat is not None and lon is not None else None
+    weather = tools.get_weather(weather_place(user, phone))
+    source = "city" if user.location_city else "device" if phone else "default"
+    if source == "device":
+        weather["city"] = "Current location"  # no reverse geocoding: Open-Meteo only goes city -> coordinates
+    return {**weather, "source": source}
 
 
 class Detection(BaseModel):
@@ -496,7 +551,7 @@ def stylist(body: StylistRequest, session: Session = Depends(get_session)) -> li
         raise HTTPException(404, "Unknown user")
     locked = list(dict.fromkeys(body.locked_item_ids))
     try:
-        here = body.location.model_dump() if body.location else None
+        here = weather_place(session.get(User, body.user_id), body.location.model_dump() if body.location else None)
         picks = gemini.style_outfits(body.user_id, body.request.strip(), locked, here)
     except ValueError as e:  # closet or locked items make a valid outfit impossible
         raise HTTPException(422, str(e))
@@ -541,6 +596,7 @@ def item_alternatives(
     """
     item = get_item_or_404(session, item_id)
     outfit_items = [item]
+    weather_user = session.get(User, item.owner_id)
     lent = social.lent_out(session, item.owner_id)
     closet = session.exec(select(Item).where(Item.owner_id == item.owner_id, Item.id.not_in(lent))).all()
     if outfit_id is not None:
@@ -549,8 +605,9 @@ def item_alternatives(
             raise HTTPException(404, "Item isn't in that outfit")
         outfit_items = [i for i in (session.get(Item, i) for i in outfit.item_ids) if i]
         closet = list(gemini.load_closet(outfit.user_id).values())
-    here = {"latitude": lat, "longitude": lon} if lat is not None and lon is not None else None
-    return styling.rank_alternatives(item, closet, outfit_items, here)
+        weather_user = session.get(User, outfit.user_id)
+    phone = {"latitude": lat, "longitude": lon} if lat is not None and lon is not None else None
+    return styling.rank_alternatives(item, closet, outfit_items, weather_place(weather_user, phone))
 
 
 class Swap(BaseModel):
@@ -613,6 +670,22 @@ def upload_body_photo(user_id: int, file: UploadFile = File(...), session: Sessi
         (STATIC_DIR / user.full_body_photo.removeprefix("/static/")).unlink(missing_ok=True)
     user.full_body_photo = f"/static/uploads/{photo_id}.jpg"
     # Renders of the old photo would show someone else's body now.
+    for outfit in session.exec(select(Outfit).where(Outfit.user_id == user_id, Outfit.render_path != None)):  # noqa: E711
+        clear_render(outfit)
+        session.add(outfit)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+@app.delete("/users/{user_id}/photo")
+def remove_body_photo(user_id: int, session: Session = Depends(get_session)) -> User:
+    """Clear the full-body photo, and the renders made from it."""
+    user = get_user_or_404(session, user_id)
+    if user.full_body_photo:
+        (STATIC_DIR / user.full_body_photo.removeprefix("/static/")).unlink(missing_ok=True)
+        user.full_body_photo = None
     for outfit in session.exec(select(Outfit).where(Outfit.user_id == user_id, Outfit.render_path != None)):  # noqa: E711
         clear_render(outfit)
         session.add(outfit)

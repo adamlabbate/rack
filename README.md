@@ -51,6 +51,9 @@ Built solo at HackRU for the Gemini track.
   outfit. Nano Banana (`gemini-nano-banana-2.1`) dresses you in those exact pieces, with each
   piece's fit (silhouette, length, rise) written into the prompt, and the result shows as an
   "AI preview". Renders are saved, so reopening one is instant; Regenerate makes a fresh one.
+- **Profile and settings**: a bio, and where your weather comes from: your phone's current
+  location, or a city you type. The Style tab shows today's forecast for that place in a
+  widget; tap it to change the location.
 - Everything persists in SQLite plus images on disk.
 
 ## Stack
