@@ -141,10 +141,10 @@ export function SharedCloset({ params }: { params: Promise<{ kind: string; id: s
 export function BorrowPill({ status, className }: { status: string | null; className?: string }) {
   const [label, style] =
     status === "accepted"
-      ? ["Borrowed", "bg-emerald-600 text-white"]
+      ? ["Borrowed", "bg-background text-brand ring-1 ring-brand ring-inset"]
       : status === "pending"
-        ? ["Requested", "bg-amber-100 text-amber-800"]
-        : ["Request", "bg-primary text-primary-foreground"];
+        ? ["Requested", "bg-brand-soft text-brand-soft-foreground"]
+        : ["Request", "bg-brand text-brand-foreground"];
   return (
     <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium shadow-sm", style, className)}>{label}</span>
   );

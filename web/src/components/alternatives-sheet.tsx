@@ -67,7 +67,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
     <>
       <SheetHeader />
       <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <Drawer.Title className="text-xl font-semibold">Swap {item.subtype ?? item.category}</Drawer.Title>
+        <Drawer.Title className="font-display text-2xl font-semibold">Swap {item.subtype ?? item.category}</Drawer.Title>
         <p className="mt-1 text-sm text-muted-foreground">
           Other {category} from your Rack and your friends&apos;, best match for this outfit first.
         </p>
@@ -92,7 +92,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
                   onClick={() => pick(alt)}
                   disabled={swapping !== null}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border p-2 text-left active:bg-muted disabled:opacity-60",
+                    "flex w-full items-center gap-3 rounded-2xl border p-2 text-left transition-transform active:scale-[0.98] active:bg-muted disabled:opacity-60",
                     swapping === alt.item.id && "disabled:opacity-100",
                   )}
                 >
@@ -108,7 +108,7 @@ function SheetBody({ outfitId, item, onPick }: { outfitId: number; item: Item; o
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {ownerOf(alt) && (
-                        <span className="rounded-full bg-foreground px-2 py-0.5 text-xs text-background capitalize">
+                        <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-soft-foreground capitalize">
                           {ownerOf(alt)}&apos;s
                         </span>
                       )}

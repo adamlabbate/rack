@@ -111,7 +111,7 @@ function ReviewBody({ upload, onDone }: { upload: UploadResult; onDone: (outcome
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 onClick={() => onDone("retake")}
-                className="h-12 rounded-full bg-primary text-base font-medium text-primary-foreground"
+                className="h-12 rounded-full bg-brand text-base font-medium text-brand-foreground"
               >
                 Retake
               </button>
@@ -124,7 +124,7 @@ function ReviewBody({ upload, onDone }: { upload: UploadResult; onDone: (outcome
           <button
             onClick={() => (anyOverlap ? setShowOverlap(true) : add())}
             disabled={chosen.length === 0}
-            className="h-12 w-full rounded-full bg-primary text-base font-medium text-primary-foreground disabled:opacity-40"
+            className="h-12 w-full rounded-full bg-brand text-base font-medium text-brand-foreground disabled:opacity-40"
           >
             {chosen.length === 0
               ? "Pick at least one"

@@ -150,7 +150,7 @@ function SheetBody({
               styleAround(item);
               router.push("/style");
             }}
-            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-base font-medium text-primary-foreground active:scale-[0.98]"
+            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-base font-medium text-brand-foreground active:scale-[0.98]"
           >
             <Wand2 className="size-5" /> Style this piece
           </Drawer.Close>
@@ -197,7 +197,7 @@ function SheetBody({
             <button
               onClick={retag}
               disabled={retagging}
-              className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
+              className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-medium text-brand-foreground disabled:opacity-60"
             >
               {retagging ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
               Try again
@@ -265,7 +265,7 @@ function SheetBody({
               ) : fitUnknown ? null : (
                 <button
                   onClick={() => save({ fit_confirmed: true })}
-                  className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+                  className="flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-medium text-brand-foreground"
                 >
                   <Check className="size-4" /> Looks right
                 </button>

@@ -118,7 +118,7 @@ function SheetBody({ item, onSent }: { item: Item; onSent: () => void }) {
             <button
               onClick={send}
               disabled={sending}
-              className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-base font-medium text-primary-foreground disabled:opacity-60"
+              className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-base font-medium text-brand-foreground disabled:opacity-60"
             >
               {sending && <Loader2 className="size-4 animate-spin" />}
               Send request

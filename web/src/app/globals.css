@@ -8,7 +8,12 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-foreground: var(--brand-soft-foreground);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-bodoni);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -51,6 +56,12 @@
 
 :root {
   --surface: #f5f5f3; /* soft panels: weather card, loading states, photo placeholders */
+  /* The one accent (cobalt). Only for the active tab, primary buttons and borrow badges: everything
+     else stays neutral so the clothes carry the color. */
+  --brand: oklch(0.47 0.22 266);
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-soft: oklch(0.94 0.035 266); /* "Requested" and other in-between borrow states */
+  --brand-soft-foreground: oklch(0.42 0.2 266);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -87,6 +98,10 @@
 
 .dark {
   --surface: oklch(0.205 0 0);
+  --brand: oklch(0.72 0.14 266);
+  --brand-foreground: oklch(0.18 0.04 266);
+  --brand-soft: oklch(0.3 0.07 266);
+  --brand-soft-foreground: oklch(0.86 0.07 266);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -135,6 +150,30 @@
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
+  --brand: oklch(0.47 0.22 266);
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-soft: oklch(0.94 0.035 266);
+  --brand-soft-foreground: oklch(0.42 0.2 266);
+}
+
+/* Loading placeholder: a soft highlight sweeping across, while Gemini works. */
+.shimmer {
+  --shimmer-base: oklch(0.925 0 0);
+  --shimmer-glint: oklch(0.985 0 0);
+  background: linear-gradient(100deg, var(--shimmer-base) 30%, var(--shimmer-glint) 50%, var(--shimmer-base) 70%);
+  background-size: 250% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+.dark .shimmer {
+  --shimmer-base: oklch(0.26 0 0);
+  --shimmer-glint: oklch(0.34 0 0);
+}
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -50% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer { animation: none; }
 }
 
 @layer base {
@@ -146,5 +185,9 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Page titles in the editorial display face; body text stays Geist. */
+  h1 {
+    @apply font-display tracking-tight;
   }
 }

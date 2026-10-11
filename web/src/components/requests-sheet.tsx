@@ -25,8 +25,8 @@ const INCOMING_LABEL: Record<BorrowStatus, string> = {
   returned: "Returned",
 };
 const STATUS_STYLE: Record<BorrowStatus, string> = {
-  pending: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-  accepted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+  pending: "bg-brand-soft text-brand-soft-foreground",
+  accepted: "bg-background text-brand ring-1 ring-brand ring-inset",
   declined: "bg-muted text-muted-foreground",
   returned: "bg-muted text-muted-foreground",
 };
@@ -179,7 +179,7 @@ function ActionButton({
       {...props}
       className={cn(
         "flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium disabled:opacity-60",
-        primary ? "bg-primary text-primary-foreground" : "bg-muted",
+        primary ? "bg-brand text-brand-foreground" : "bg-muted",
         className,
       )}
     >

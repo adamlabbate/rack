@@ -167,7 +167,10 @@ export default function ClosetPage() {
             {pendingTiles(uploading).map((tile, i) => (
               <li
                 key={`pending-${i}`}
-                className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-surface p-3 text-center text-xs text-muted-foreground"
+                className={cn(
+                  "flex aspect-square flex-col items-center justify-center gap-2 rounded-xl p-3 text-center text-xs text-muted-foreground",
+                  tile.busy ? "shimmer" : "bg-surface",
+                )}
               >
                 {tile.busy && <Loader2 className="size-6 animate-spin" />}
                 {tile.label}
@@ -238,7 +241,7 @@ export default function ClosetPage() {
         onClick={() => fileInput.current?.click()}
         disabled={uploading !== null || !currentUser}
         aria-label="Add clothing"
-        className="fixed right-[max(1rem,calc(50vw-14rem+1rem))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 disabled:opacity-60"
+        className="fixed right-[max(1rem,calc(50vw-14rem+1rem))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-lg active:scale-95 disabled:opacity-60"
       >
         {uploading ? <Loader2 className="size-7 animate-spin" /> : <Plus className="size-8" />}
       </button>

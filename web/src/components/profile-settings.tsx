@@ -168,7 +168,7 @@ export function ProfileSettings() {
           <button
             onClick={saveBio}
             disabled={busy !== null || bio === (currentUser.bio ?? "")}
-            className="flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground active:scale-95 disabled:opacity-40"
+            className="flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-medium text-brand-foreground active:scale-95 disabled:opacity-40"
           >
             {busy === "bio" && <Loader2 className="size-4 animate-spin" />}
             Save bio
@@ -217,7 +217,7 @@ export function ProfileSettings() {
           <button
             type="submit"
             disabled={busy !== null || !city.trim()}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-40"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-brand-foreground disabled:opacity-40"
           >
             {busy === "city" && <Loader2 className="size-4 animate-spin" />}
             Set

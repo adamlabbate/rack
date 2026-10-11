@@ -14,13 +14,18 @@ import { cn } from "@/lib/utils";
 const QUICK_PROMPTS = ["Class tomorrow", "Date night", "Career fair"];
 
 // The stylist takes 15-40s; cycle through what it's actually doing so the wait reads as progress.
-const THINKING = [
-  "Looking through your Rack…",
-  "Checking the weather…",
-  "Matching fits and colors…",
-  "Putting outfits together…",
-  "Double-checking every outfit…",
-];
+// It really does look at friends' shared pieces, so their names show up too.
+function thinkingSteps(friends: string[]) {
+  const name = (n: string) => n.charAt(0).toUpperCase() + n.slice(1);
+  return [
+    "Digging through your Rack…",
+    "Checking the forecast…",
+    ...friends.map((f) => `Peeking at ${name(f)}'s rack…`),
+    "Matching fits and colors…",
+    "Pulling the looks together…",
+    "Double-checking every outfit…",
+  ];
+}
 
 // Only one of each can be locked (the API rejects two locked tops); accessories can stack.
 const SINGLE = ["top", "bottom", "shoes", "outerwear"];
@@ -39,7 +44,7 @@ function anchorRequest(item: Item) {
 }
 
 export default function StylePage() {
-  const { currentUser } = useUser();
+  const { users, currentUser } = useUser();
   const [text, setText] = useState("");
   const [results, setResults] = useState<Results | null>(lastResults);
   const [lockedIds, setLockedIds] = useState<number[]>(lastLocked);
@@ -82,7 +87,7 @@ export default function StylePage() {
 
   useEffect(() => {
     if (!loading) return;
-    const timer = setInterval(() => setThinking((n) => (n + 1) % THINKING.length), 3500);
+    const timer = setInterval(() => setThinking((n) => n + 1), 3000);
     return () => clearInterval(timer);
   }, [loading]);
 
@@ -179,6 +184,8 @@ export default function StylePage() {
     setActive(Math.round(el.scrollLeft / (card.offsetWidth + 12)));
   }
 
+  const steps = thinkingSteps(users.filter((u) => u.id !== currentUser?.id).map((u) => u.name));
+
   const lockedShown = mine
     ? lockedIds.filter((id) => mine.outfits.some((o) => o.outfit.item_ids.includes(id))).length
     : 0;
@@ -231,7 +238,7 @@ export default function StylePage() {
           type="submit"
           disabled={loading || !text.trim() || !currentUser}
           aria-label="Style me"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground disabled:opacity-40"
         >
           <ArrowUp className="size-5" />
         </button>
@@ -255,15 +262,10 @@ export default function StylePage() {
       )}
 
       {loading ? (
-        <div className="mt-6">
-          <div role="status" className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-3xl bg-surface text-muted-foreground">
-            <Sparkles className="size-8 animate-pulse" />
-            <p key={thinking} className="animate-in fade-in text-sm font-medium text-foreground duration-500">
-              {THINKING[thinking]}
-            </p>
-            <p className="text-xs">This usually takes 15–40 seconds</p>
-          </div>
-        </div>
+        <OutfitSkeleton
+          message={steps[thinking % steps.length]}
+          step={thinking}
+        />
       ) : mine ? (
         <section className="mt-6">
           <p className="mb-3 text-sm text-muted-foreground">
@@ -275,10 +277,11 @@ export default function StylePage() {
             onScroll={onScroll}
             className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 [scrollbar-width:none]"
           >
-            {mine.outfits.map((styled) => (
+            {mine.outfits.map((styled, i) => (
               <div key={styled.outfit.id} className="w-[88%] shrink-0 snap-center">
                 <OutfitCard
                   styled={styled}
+                  look={i + 1}
                   lockedIds={lockedIds}
                   onTapItem={(item) => {
                     setTarget({ outfitId: styled.outfit.id, item });
@@ -309,7 +312,7 @@ export default function StylePage() {
           )}
           <button
             onClick={regenerate}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary font-medium text-primary-foreground active:scale-[0.98]"
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand font-medium text-brand-foreground active:scale-[0.98]"
           >
             <RefreshCw className="size-4" />
             Regenerate
@@ -327,6 +330,31 @@ export default function StylePage() {
 
       <AlternativesSheet target={target} open={sheetOpen} onOpenChange={setSheetOpen} onPick={pickAlternative} />
       <RenderSheet styled={renderTarget} open={renderOpen} onOpenChange={setRenderOpen} onRendered={replaceOutfit} />
+    </div>
+  );
+}
+
+// While Gemini works: the shape of an outfit card, shimmering, under what the stylist is doing
+// (on top, so it's on screen without scrolling).
+function OutfitSkeleton({ message, step }: { message: string; step: number }) {
+  return (
+    <div role="status" className="mt-6 overflow-hidden rounded-3xl border">
+      <div className="px-5 pt-4 pb-4">
+        <p className="flex items-center gap-1.5 text-[10px] font-medium tracking-[0.2em] text-muted-foreground uppercase">
+          <Sparkles className="size-3 animate-pulse" /> Styling · 15–40 sec
+        </p>
+        <p key={step} className="mt-1 animate-in font-display text-2xl leading-tight font-semibold duration-500 fade-in slide-in-from-bottom-1">
+          {message}
+        </p>
+      </div>
+      <div className="flex aspect-[4/5] flex-col gap-4 bg-surface px-5 pt-5 pb-5">
+        <div className="flex flex-[3] gap-4">
+          <div className="shimmer flex-1 rounded-2xl" />
+          <div className="shimmer flex-1 rounded-2xl" />
+        </div>
+        <div className="shimmer mx-auto w-1/2 flex-[3.4] rounded-2xl" />
+        <div className="shimmer mx-auto w-2/5 flex-[1.5] rounded-2xl" />
+      </div>
     </div>
   );
 }

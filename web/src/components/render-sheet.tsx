@@ -73,7 +73,7 @@ function SheetBody({ styled, onRendered }: { styled: StyledOutfit; onRendered: P
     <>
       <SheetHeader />
       <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <Drawer.Title className="text-lg font-semibold">{styled.outfit.name}</Drawer.Title>
+        <Drawer.Title className="font-display text-2xl leading-tight font-semibold">{styled.outfit.name}</Drawer.Title>
 
         {!hasPhoto ? (
           <>
@@ -90,10 +90,10 @@ function SheetBody({ styled, onRendered }: { styled: StyledOutfit; onRendered: P
             {rendering ? (
               <div
                 role="status"
-                className="flex aspect-[3/4] flex-col items-center justify-center gap-3 rounded-3xl bg-surface text-muted-foreground"
+                className="shimmer flex aspect-[3/4] flex-col items-center justify-center gap-3 rounded-3xl px-6 text-center text-muted-foreground"
               >
-                <Sparkles className="size-8 animate-pulse" />
-                <p key={step} className="animate-in fade-in text-sm font-medium text-foreground duration-500">
+                <Sparkles className="size-7 animate-pulse" />
+                <p key={step} className="animate-in font-display text-xl font-semibold text-foreground duration-500 fade-in slide-in-from-bottom-1">
                   {steps[step]}
                 </p>
                 <p className="text-xs">This usually takes 10–20 seconds</p>
@@ -119,7 +119,7 @@ function SheetBody({ styled, onRendered }: { styled: StyledOutfit; onRendered: P
             {!rendering && (
               <button
                 onClick={() => render(Boolean(src))}
-                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary font-medium text-primary-foreground active:scale-[0.98]"
+                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand font-medium text-brand-foreground active:scale-[0.98]"
               >
                 <RefreshCw className="size-4" />
                 {src ? "Regenerate" : "Try again"}

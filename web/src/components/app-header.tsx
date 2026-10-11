@@ -15,7 +15,7 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-10 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="flex h-14 items-center justify-between gap-3 px-4">
-        <span className="text-xl font-semibold tracking-tight">Rack</span>
+        <span className="font-display text-2xl leading-none font-bold tracking-[0.18em]">RACK</span>
         <div className="flex items-center gap-1">
           <div className="flex rounded-full bg-muted p-1" role="group" aria-label="Switch user">
             {users.map((user) => (
@@ -41,7 +41,7 @@ export function AppHeader() {
           >
             <Bell className="size-6" />
             {pendingIncoming > 0 && (
-              <span className="absolute top-1 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
+              <span className="absolute top-1 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold text-brand-foreground">
                 {pendingIncoming}
               </span>
             )}

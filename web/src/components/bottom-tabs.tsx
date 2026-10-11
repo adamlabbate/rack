@@ -40,12 +40,12 @@ export function TabBar({ pathname }: { pathname: string | null }) {
                 <img
                   src={picture}
                   alt=""
-                  className={cn("size-6 rounded-full object-cover", active && "ring-2 ring-foreground ring-offset-1")}
+                  className={cn("size-6 rounded-full object-cover", active && "ring-2 ring-brand ring-offset-1 ring-offset-background")}
                 />
               ) : (
-                <Icon className="size-6" />
+                <Icon className={cn("size-6 transition-transform", active && "scale-110")} />
               )}
-              <span className="text-xs">{ready ? label : `${label} · soon`}</span>
+              <span className={cn("text-xs", active && "font-semibold")}>{ready ? label : `${label} · soon`}</span>
             </>
           );
           const base = "flex h-16 flex-col items-center justify-center gap-1";
@@ -54,7 +54,7 @@ export function TabBar({ pathname }: { pathname: string | null }) {
               {ready ? (
                 <Link
                   href={href}
-                  className={cn(base, active ? "text-foreground" : "text-muted-foreground")}
+                  className={cn(base, active ? "text-brand" : "text-muted-foreground")}
                 >
                   {content}
                 </Link>
