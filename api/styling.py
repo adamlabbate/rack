@@ -10,7 +10,6 @@ from tools import get_weather
 NEUTRALS = ("black", "white", "grey", "gray", "charcoal", "navy", "beige", "cream", "ivory",
             "tan", "khaki", "brown", "denim", "olive", "stone")
 
-CITY = "New Brunswick"  # get_weather is still hardcoded; this only labels the result
 
 
 def _main_color(item: Item) -> str | None:
@@ -57,19 +56,23 @@ def score_alternative(candidate: Item, others: list[Item], target_formality: flo
         scores.append(1.0 if rain_ok else 0.0)
         notes.append("rain-ok" if rain_ok else "not for rain")
     if candidate.category in ("top", "bottom", "outerwear") and candidate.warmth:
-        scores.append(1 - abs(candidate.warmth - _ideal_warmth(weather["temp_f"])) / 4)
+        if "temp_f" in weather:
+            scores.append(1 - abs(candidate.warmth - _ideal_warmth(weather["temp_f"])) / 4)
     weather_score = sum(scores) / len(scores) if scores else 1.0
 
     return round(0.4 * formality + 0.35 * color_score + 0.25 * weather_score, 2), notes
 
 
-def rank_alternatives(item: Item, closet: list[Item], outfit_items: list[Item]) -> list[dict]:
-    """Same-category items from the closet, best first, judged against the rest of the outfit."""
+def rank_alternatives(item: Item, closet: list[Item], outfit_items: list[Item], here: dict | None = None) -> list[dict]:
+    """Same-category items from the closet, best first, judged against the rest of the outfit.
+
+    `here` is the phone's {latitude, longitude} for the weather; campus if missing.
+    """
     others = [i for i in outfit_items if i.id != item.id]
     in_outfit = {i.id for i in outfit_items} | {item.id}
     formalities = [i.formality for i in others if i.formality] or [item.formality or 3]
     target = sum(formalities) / len(formalities)
-    weather = get_weather(CITY)
+    weather = get_weather(here)  # live, cached for 15 minutes; may be {"error": ...} offline
 
     ranked = []
     for candidate in closet:

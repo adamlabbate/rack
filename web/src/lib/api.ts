@@ -1,3 +1,5 @@
+import { getLocation } from "@/lib/location";
+
 // The API runs on port 8000 of the same machine that serves the web app,
 // so this works both on localhost and from a phone on the LAN.
 export function apiBase() {
@@ -170,17 +172,20 @@ export type StyledOutfit = { outfit: Outfit; items: Item[] };
 
 export type Alternative = { item: Item; score: number; notes: string[] };
 
-// Takes ~15-40s with the real stylist.
-export function styleOutfits(userId: number, text: string, lockedItemIds: number[]) {
+// Takes ~15-40s with the real stylist. Sends the phone's location (if allowed) for local weather.
+export async function styleOutfits(userId: number, text: string, lockedItemIds: number[]) {
+  const location = await getLocation();
   return request<StyledOutfit[]>("/stylist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, request: text, locked_item_ids: lockedItemIds }),
+    body: JSON.stringify({ user_id: userId, request: text, locked_item_ids: lockedItemIds, location }),
   });
 }
 
-export function getAlternatives(itemId: number, outfitId: number) {
-  return request<Alternative[]>(`/items/${itemId}/alternatives?outfit_id=${outfitId}`);
+export async function getAlternatives(itemId: number, outfitId: number) {
+  const location = await getLocation();
+  const where = location ? `&lat=${location.latitude}&lon=${location.longitude}` : "";
+  return request<Alternative[]>(`/items/${itemId}/alternatives?outfit_id=${outfitId}${where}`);
 }
 
 export function swapItem(outfitId: number, oldItemId: number, newItemId: number) {

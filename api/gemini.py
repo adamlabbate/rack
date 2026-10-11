@@ -157,7 +157,8 @@ Use your tools:
 - search_closet to see what the user owns. Only use item IDs that search_closet returned; never invent items.
 - search_closet with include_shared=true to also see what friends can lend; each item has an owner_name
   ("you" for the user's own). Look at shared items whenever the user's own closet is thin for the occasion.
-- get_weather if the user didn't describe the weather. If they did, trust what they said.
+- get_weather if the user didn't describe the weather (day=tomorrow if the outfit is for tomorrow). It's the
+  live forecast where the user is. If they described the weather, trust what they said.
 - get_preferences for what the user likes; it may be empty.
 
 Rules for every outfit:
@@ -284,7 +285,9 @@ def mark_borrowed(outfits: list[OutfitPick], owner_id: int, closet: dict[int, It
     return outfits
 
 
-def style_outfits(owner_id: int, request: str, locked_item_ids: list[int] = []) -> list[OutfitPick] | None:
+def style_outfits(
+    owner_id: int, request: str, locked_item_ids: list[int] = [], here: dict | None = None
+) -> list[OutfitPick] | None:
     """Ask the stylist agent for 2-3 outfits and return only the ones that pass validation.
 
     Outfits may borrow items that friends and groups share; those IDs are in borrowed_item_ids.
@@ -309,7 +312,7 @@ def style_outfits(owner_id: int, request: str, locked_item_ids: list[int] = []) 
         # Agent call: the SDK runs search_closet / get_weather / get_preferences for the model.
         chat = _get_client().chats.create(
             model=MODEL,
-            config=types.GenerateContentConfig(system_instruction=STYLIST_PROMPT, tools=stylist_tools(owner_id)),
+            config=types.GenerateContentConfig(system_instruction=STYLIST_PROMPT, tools=stylist_tools(owner_id, here)),
         )
         outfits = _structure(_with_retry(lambda: chat.send_message(message)).text)
         problems = [outfit_problems(o.item_ids, closet, locked_item_ids) for o in outfits]

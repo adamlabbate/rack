@@ -116,7 +116,9 @@ without using quota.
 ## How the stylist works
 
 1. `POST /stylist {user_id, request, locked_item_ids}` runs a Gemini agent with three tools:
-   `search_closet`, `get_weather` and `get_preferences`.
+   `search_closet`, `get_weather` and `get_preferences`. Weather is the live
+   [Open-Meteo](https://open-meteo.com) forecast (free, no key) for today or tomorrow, at the
+   phone's location when the browser shares it, otherwise New Brunswick, NJ.
 2. A second structured-output call turns its answer into outfits. Code checks every outfit, sends
    the problems back to the agent once, and drops anything still invalid.
 3. `GET /items/{id}/alternatives?outfit_id=` ranks same-category items without calling Gemini:

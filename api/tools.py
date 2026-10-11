@@ -1,16 +1,22 @@
 """Tools the Gemini stylist can call. Gemini reads each function's type hints and docstring.
 
-Every tool takes owner_id first; bind_owner() fixes it before the agent sees the tool, so the
-model can only ever look at the closet of the user it is styling.
+Tools that take owner_id (or the user's location) get it fixed by bind() before the agent sees
+them, so the model can only ever look at the closet of the user it is styling.
 """
 
 import functools
 import inspect
+import logging
+import time
+from typing import Literal
 
+import httpx
 from sqlmodel import Session, or_, select
 
 import social
 from db import Item, User, engine
+
+log = logging.getLogger(__name__)
 
 
 def search_closet(
@@ -85,10 +91,114 @@ def search_closet(
     ]
 
 
-def get_weather(city: str) -> dict:
-    """Current weather for a city: temperature in Fahrenheit and conditions."""
-    # TODO: real forecast API. Hardcoded so the stylist always has something to work with.
-    return {"city": city, "temp_f": 58, "conditions": "light rain", "precipitation": True}
+# Used when the app couldn't get the phone's location (no permission, or not on HTTPS).
+HOME = {"city": "New Brunswick, NJ", "latitude": 40.4862, "longitude": -74.4518}
+
+# Open-Meteo is free and needs no API key. WMO weather codes -> plain words.
+GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+WMO_CODES = {
+    0: "clear", 1: "mostly clear", 2: "partly cloudy", 3: "overcast", 45: "fog", 48: "fog",
+    51: "light drizzle", 53: "drizzle", 55: "heavy drizzle", 56: "freezing drizzle", 57: "freezing drizzle",
+    61: "light rain", 63: "rain", 65: "heavy rain", 66: "freezing rain", 67: "freezing rain",
+    71: "light snow", 73: "snow", 75: "heavy snow", 77: "snow grains",
+    80: "rain showers", 81: "rain showers", 82: "heavy rain showers", 85: "snow showers", 86: "snow showers",
+    95: "thunderstorm", 96: "thunderstorm with hail", 99: "thunderstorm with hail",
+}
+SNOW_CODES = {71, 73, 75, 77, 85, 86}
+WET_CODES = {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99} | SNOW_CODES
+
+# Alternatives ask for the weather on every tap; a forecast barely changes in 15 minutes.
+CACHE_SECONDS = 15 * 60
+_cache: dict[tuple, tuple[float, dict]] = {}
+
+
+def _locate(city: str) -> dict | None:
+    """City name -> name, latitude, longitude. "Austin, TX" searches "Austin", the biggest match wins."""
+    response = httpx.get(GEOCODE_URL, params={"name": city.split(",")[0].strip(), "count": 1}, timeout=5)
+    response.raise_for_status()
+    results = response.json().get("results")
+    if not results:
+        return None
+    place = results[0]
+    name = ", ".join(filter(None, [place["name"], place.get("admin1")]))
+    return {"city": name, "latitude": place["latitude"], "longitude": place["longitude"]}
+
+
+def _forecast(place: dict) -> dict:
+    response = httpx.get(
+        FORECAST_URL,
+        params={
+            "latitude": place["latitude"],
+            "longitude": place["longitude"],
+            "current": "temperature_2m,weather_code",
+            "daily": "temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max",
+            "temperature_unit": "fahrenheit",
+            "timezone": "auto",
+            "forecast_days": 2,
+        },
+        timeout=5,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_weather(
+    here: dict | None = None, city: str | None = None, day: Literal["today", "tomorrow"] = "today"
+) -> dict:
+    """Live weather forecast. Call it when the user didn't say what the weather is like.
+
+    Args:
+        city: only if the user will be somewhere else; leave empty for where they are right now.
+        day: today or tomorrow, whichever the outfit is for.
+
+    Returns:
+        city, day, temp_f (now for today, the day's high for tomorrow), high_f, low_f, conditions,
+        rain_chance (percent), precipitation (true if rain or snow is likely) and snow. If the
+        forecast can't be reached, only city and error.
+    """
+    # `here` is the phone's {latitude, longitude}, bound by stylist_tools; Gemini never sees it.
+    try:
+        if city:
+            place = _locate(city)
+        elif here:
+            place = {"city": "the user's current location", **here}
+        else:
+            place = HOME
+        if place is None:
+            return {"city": city, "error": "Unknown city"}
+        key = (round(place["latitude"], 2), round(place["longitude"], 2))  # ~1 km
+        cached = _cache.get(key)
+        if cached and time.time() - cached[0] < CACHE_SECONDS:
+            data = cached[1]
+        else:
+            data = _forecast(place)
+            _cache[key] = (time.time(), data)
+    except (httpx.HTTPError, KeyError, ValueError) as e:
+        log.warning("Weather lookup failed: %s", e)
+        return {"city": city or HOME["city"], "error": "Weather is unavailable right now"}
+
+    i = 0 if day == "today" else 1
+    daily = data["daily"]
+    code = daily["weather_code"][i]
+    rain_chance = daily["precipitation_probability_max"][i] or 0
+    high, low = round(daily["temperature_2m_max"][i]), round(daily["temperature_2m_min"][i])
+    if day == "today":
+        code = data["current"]["weather_code"]  # what it's doing right now
+        temp = round(data["current"]["temperature_2m"])
+    else:
+        temp = high
+    return {
+        "city": place["city"],
+        "day": day,
+        "temp_f": temp,
+        "high_f": high,
+        "low_f": low,
+        "conditions": WMO_CODES.get(code, "unknown"),
+        "rain_chance": rain_chance,
+        "precipitation": code in WET_CODES or rain_chance >= 50,
+        "snow": code in SNOW_CODES or daily["weather_code"][i] in SNOW_CODES,
+    }
 
 
 def get_preferences(owner_id: int) -> dict:
@@ -115,19 +225,23 @@ def get_preferences(owner_id: int) -> dict:
     return {"swaps": prefs.get("swaps", 0), "prefers": prefers, "avoids": avoids}
 
 
-def bind_owner(fn, owner_id: int):
-    """Return fn with owner_id fixed and removed from the signature Gemini sees."""
+def bind(fn, **fixed):
+    """Return fn with these arguments fixed and removed from the signature Gemini sees."""
 
     @functools.wraps(fn)
     def bound(**kwargs):
-        return fn(owner_id, **kwargs)
+        return fn(**fixed, **kwargs)
 
     sig = inspect.signature(fn)
-    bound.__signature__ = sig.replace(parameters=[p for n, p in sig.parameters.items() if n != "owner_id"])
-    bound.__annotations__ = {k: v for k, v in fn.__annotations__.items() if k != "owner_id"}
+    bound.__signature__ = sig.replace(parameters=[p for n, p in sig.parameters.items() if n not in fixed])
+    bound.__annotations__ = {k: v for k, v in fn.__annotations__.items() if k not in fixed}
     del bound.__wrapped__  # otherwise inspect.signature follows it back to the original
     return bound
 
 
-def stylist_tools(owner_id: int) -> list:
-    return [bind_owner(search_closet, owner_id), get_weather, bind_owner(get_preferences, owner_id)]
+def stylist_tools(owner_id: int, here: dict | None = None) -> list:
+    return [
+        bind(search_closet, owner_id=owner_id),
+        bind(get_weather, here=here),
+        bind(get_preferences, owner_id=owner_id),
+    ]

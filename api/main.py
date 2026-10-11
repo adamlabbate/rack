@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -433,10 +433,18 @@ def retag_item(item_id: int, session: Session = Depends(get_session)) -> Item:
     return item
 
 
+class Location(BaseModel):
+    """The phone's position, for the weather. The app leaves it out if it can't get one."""
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
 class StylistRequest(BaseModel):
     user_id: int
     request: str = Field(min_length=1)
     locked_item_ids: list[int] = []
+    location: Location | None = None
 
 
 class OutfitOut(BaseModel):
@@ -453,7 +461,8 @@ def stylist(body: StylistRequest, session: Session = Depends(get_session)) -> li
         raise HTTPException(404, "Unknown user")
     locked = list(dict.fromkeys(body.locked_item_ids))
     try:
-        picks = gemini.style_outfits(body.user_id, body.request.strip(), locked)
+        here = body.location.model_dump() if body.location else None
+        picks = gemini.style_outfits(body.user_id, body.request.strip(), locked, here)
     except ValueError as e:  # closet or locked items make a valid outfit impossible
         raise HTTPException(422, str(e))
     if picks is None:
@@ -486,7 +495,11 @@ class Alternative(BaseModel):
 
 @app.get("/items/{item_id}/alternatives")
 def item_alternatives(
-    item_id: int, outfit_id: int | None = None, session: Session = Depends(get_session)
+    item_id: int,
+    outfit_id: int | None = None,
+    lat: float | None = Query(None, ge=-90, le=90),
+    lon: float | None = Query(None, ge=-180, le=180),
+    session: Session = Depends(get_session),
 ) -> list[Alternative]:
     """Same-category items that could replace this one, best first.
 
@@ -502,7 +515,8 @@ def item_alternatives(
             raise HTTPException(404, "Item isn't in that outfit")
         outfit_items = [i for i in (session.get(Item, i) for i in outfit.item_ids) if i]
         closet = list(gemini.load_closet(outfit.user_id).values())
-    return styling.rank_alternatives(item, closet, outfit_items)
+    here = {"latitude": lat, "longitude": lon} if lat is not None and lon is not None else None
+    return styling.rank_alternatives(item, closet, outfit_items, here)
 
 
 class Swap(BaseModel):

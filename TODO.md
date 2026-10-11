@@ -19,8 +19,8 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 
 - [ ] **Style results can go stale.** The Style tab keeps the last outfits in memory across tab
       switches; editing or deleting one of those items in the Closet doesn't update the cards.
-- [ ] **Alternatives use the hardcoded weather** (`styling.CITY` -> `get_weather`), not the
-      weather the user typed in their request.
+- [ ] **Alternatives use today's forecast**, not the day or weather the user typed in their
+      request (e.g. "tomorrow, it's going to pour").
 - [ ] **Preferences never fade.** Swap scores only add up; an old swap counts as much as today's.
 - [ ] **`users.preferences` starts as `[]` on migrated rows** (`add_missing_columns` gives every
       JSON column `DEFAULT '[]'`). Code reads it with `or {}`, so it's harmless.
@@ -28,7 +28,12 @@ Known issues and loose ends, to fix when there's time. Newest at the top of each
 - [ ] **Stylist is slow (~40s).** One real `POST /stylist` took 40s (agent call with tools + a
       structuring call). Needs a good loading state in the UI; could also try lower thinking
       budget or skipping the second call.
-- [ ] **`get_weather` is hardcoded** (58°F, light rain) in `api/tools.py`.
+- [x] **`get_weather` is hardcoded** (58°F, light rain) in `api/tools.py`. Now a live Open-Meteo
+      forecast at the phone's location.
+- [ ] **No location on the phone over plain HTTP.** Browsers only share location on HTTPS or
+      localhost, so on `http://<LAN IP>:3000` the weather falls back to New Brunswick, NJ. Fix:
+      serve web and API over HTTPS (e.g. `next dev --experimental-https` plus uvicorn with the
+      same cert) or a tunnel.
 - [ ] **Only one outerwear piece per outfit.** On a cold rainy day the stylist can't layer the
       warm hooded jacket under the rain shell; it puts a warm top under the shell instead.
 - [ ] **Reasons can invent details.** One outfit called a hoodie "fleece" though no tag says so.

@@ -107,7 +107,9 @@ CURRENT STAGE: 4 (Social). Stages 1 and 2 are done (loose ends in TODO.md); stag
   analyze_photo return a fixed 2-garment result and style_outfits return 2 outfits
   from the user's real items (incl. an outerwear piece if they own one), with no API calls.
 - Stylist: POST /stylist {user_id, request, locked_item_ids} -> gemini.style_outfits:
-  agent chat with tools from api/tools.py (search_closet, get_weather (hardcoded),
+  agent chat with tools from api/tools.py (search_closet, get_weather (live Open-Meteo forecast,
+  no key, cached 15 min; today/tomorrow; the phone's location via bind(), else tools.HOME =
+  New Brunswick, NJ; returns {error} offline),
   get_preferences (learned from swaps)); bind_owner() hides owner_id from Gemini. A second
   structured call parses the answer into Outfits; outfit_problems() validates in
   code, one retry in the same chat with the errors, invalid ones dropped. Returns
